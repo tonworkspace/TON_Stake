@@ -165,7 +165,7 @@ function ReferralComponent() {
   return (
     <div>
       <p>Your referral code: {referralCode}</p>
-      <button onClick={() => handleReferral('DIVINE123')}>
+      <button onClick={() => handleReferral('TONERS123')}>
         Use Referral Code
       </button>
     </div>

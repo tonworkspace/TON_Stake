@@ -1,6 +1,7 @@
 import { CronJob } from 'cron';
 import { supabase } from '@/lib/supabaseClient';
 import { logCronError, logCronInfo, logCronWarning } from '@/lib/logger';
+import { referralSystem } from '../lib/referralSystem';
 
 export const initializeCronJobs = () => {
   // Daily rewards distribution - Runs every day at midnight
@@ -190,4 +191,44 @@ export const initializeCronJobs = () => {
       await logCronError('activityMonitor', error, 'critical');
     }
   }).start();
-}; 
+};
+
+// Process daily STK rewards for all users with active referrals
+export const processDailySTKRewards = async () => {
+  try {
+    // Get all users with active referrals
+    const { data: users } = await supabase
+      .from('users')
+      .select('id')
+      .gt('direct_referrals', 0);
+
+    if (!users?.length) return;
+
+    // Process rewards for each user
+    const promises = users.map(user => referralSystem.processDailySTKRewards(user.id));
+    await Promise.all(promises);
+
+    console.log(`Processed daily STK rewards for ${users.length} users`);
+  } catch (error) {
+    console.error('Failed to process daily STK rewards:', error);
+  }
+};
+
+// Schedule daily STK rewards processing
+export const scheduleDailySTKRewards = () => {
+  // Run at 00:00 UTC every day
+  const now = new Date();
+  const nextRun = new Date(now);
+  nextRun.setUTCHours(24, 0, 0, 0);
+  
+  const timeUntilNextRun = nextRun.getTime() - now.getTime();
+  
+  setTimeout(() => {
+    processDailySTKRewards();
+    // Schedule next run
+    setInterval(processDailySTKRewards, 24 * 60 * 60 * 1000);
+  }, timeUntilNextRun);
+};
+
+// Start the scheduler when the app initializes
+scheduleDailySTKRewards(); 

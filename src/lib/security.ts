@@ -3,7 +3,7 @@ import { sha256 } from 'js-sha256';
 
 // Security Configuration
 export const SECURITY_CONFIG = {
-  MAX_BALANCE_CHANGE: 10000, // Maximum allowed balance change per operation
+  MAX_BALANCE_CHANGE: 100000, // Maximum allowed balance change per operation (increased for normal usage)
   MAX_OPERATIONS_PER_MINUTE: 10,
   MAX_OFFLINE_QUEUE_SIZE: 50,
   DATA_INTEGRITY_ENABLED: true,
@@ -111,8 +111,25 @@ export const logSecurityEvent = async (event: {
 
 // Data Validation
 export const validateBalanceChange = (oldBalance: number, newBalance: number): boolean => {
+  // Handle NaN and invalid values
+  if (isNaN(oldBalance) || isNaN(newBalance) || !isFinite(oldBalance) || !isFinite(newBalance)) {
+    console.warn('Invalid balance values detected:', { oldBalance, newBalance });
+    return false;
+  }
+  
   const change = Math.abs(newBalance - oldBalance);
-  return change <= SECURITY_CONFIG.MAX_BALANCE_CHANGE;
+  
+  // Allow balance decreases (staking, withdrawals) without restriction
+  if (newBalance <= oldBalance) {
+    return true;
+  }
+  
+  // Only validate increases (deposits, rewards) against the threshold
+  if (newBalance > oldBalance) {
+    return change <= SECURITY_CONFIG.MAX_BALANCE_CHANGE;
+  }
+  
+  return true;
 };
 
 export const validateStakeData = (stake: any): boolean => {

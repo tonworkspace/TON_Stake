@@ -42,6 +42,7 @@ CREATE TABLE stakes (
     is_active BOOLEAN DEFAULT true,
     last_payout TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     speed_boost_active BOOLEAN DEFAULT false,
+    cycle_progress NUMERIC DEFAULT 0,
     CONSTRAINT positive_amount CHECK (amount >= 1) -- Minimum 1 TON
 );
 
@@ -597,5 +598,37 @@ RETURNS BOOLEAN AS $$
 BEGIN
   -- Function is already created above, just return true
   RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql; 
+
+-- Function to add STK balance
+CREATE OR REPLACE FUNCTION add_stk_balance(
+    p_user_id INTEGER,
+    p_amount NUMERIC,
+    p_type TEXT
+) RETURNS BOOLEAN AS $$
+BEGIN
+    -- Update user's STK balance
+    UPDATE users 
+    SET 
+        total_sbt = COALESCE(total_sbt, 0) + p_amount,
+        last_sbt_claim = NOW()
+    WHERE id = p_user_id;
+
+    -- Log the STK earning
+    INSERT INTO sbt_history (
+        user_id,
+        amount,
+        type
+    ) VALUES (
+        p_user_id,
+        p_amount,
+        p_type
+    );
+
+    RETURN FOUND;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN FALSE;
 END;
 $$ LANGUAGE plpgsql; 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabaseClient';
+import { referralSystem, REFERRAL_CONFIG } from '../lib/referralSystem';
 
 interface ReferralData {
   code: string;
@@ -12,6 +13,11 @@ interface ReferralData {
     points: number;
     gems: number;
     special: string[];
+    stk: {
+      daily: number;
+      total: number;
+      pending: number;
+    };
   };
   referrals: ReferralUser[];
   level: number;
@@ -50,9 +56,9 @@ interface ReferralUser {
   rank?: string;
   total_earned?: number;
   balance?: number;
-  // TBC Coins specific data
-  tbcCoins?: number;
-  totalTbcEarned?: number;
+  // TONERS specific data
+  tonersCoins?: number;
+  totalTonersEarned?: number;
   pointSource?: 'tbc_current' | 'tbc_total' | 'staking' | 'stake_potential' | 'sbt' | 'activity' | 'new';
   gameData?: any;
 }
@@ -81,7 +87,16 @@ export const useReferralIntegration = () => {
     totalReferrals: 0,
     activeReferrals: 0,
     totalEarned: 0,
-    rewards: { points: 0, gems: 0, special: [] },
+    rewards: { 
+      points: 0, 
+      gems: 0, 
+      special: [],
+      stk: {
+        daily: 0,
+        total: 0,
+        pending: 0
+      }
+    },
     referrals: [],
     level: 1,
     nextLevelReward: '',
@@ -169,13 +184,13 @@ export const useReferralIntegration = () => {
     }
 
     // Check format
-    const startParamRegex = /^DIVINE\d{6}[A-Z0-9]{4}$/i;
+    const startParamRegex = /^TONERS\d{6}[A-Z0-9]{4}$/i;
     if (!startParamRegex.test(code)) {
       return { isValid: false, error: 'Invalid referral code format' };
     }
 
     // Extract referrer ID
-    const referrerIdMatch = code.match(/DIVINE(\d{6})/i);
+    const referrerIdMatch = code.match(/TONERS(\d{6})/i);
     if (!referrerIdMatch) {
       return { isValid: false, error: 'Could not extract referrer ID' };
     }
@@ -200,7 +215,7 @@ export const useReferralIntegration = () => {
     }
 
     // Check if referrer exists
-    const referrerIdMatch = code.match(/DIVINE(\d{6})/i);
+    const referrerIdMatch = code.match(/TONERS(\d{6})/i);
     const referrerId = parseInt(referrerIdMatch![1]);
 
     try {
@@ -229,7 +244,7 @@ export const useReferralIntegration = () => {
     
     // Create a static code based on user ID only - no timestamp
     // This ensures the code is always the same for each user
-    const baseCode = `DIVINE${userId.toString().padStart(6, '0')}`;
+    const baseCode = `TONERS${userId.toString().padStart(6, '0')}`;
     
     // Create a deterministic suffix based on user ID for uniqueness
     // This will always be the same for the same user
@@ -261,7 +276,7 @@ export const useReferralIntegration = () => {
       }
 
       // If user already has a referral code, use it
-      if (userData.referral_code) {
+      if (userData?.referral_code) {
         setReferralCode(userData.referral_code);
         return userData.referral_code;
       }
@@ -277,7 +292,17 @@ export const useReferralIntegration = () => {
 
       if (updateError) {
         console.error('Error saving referral code:', updateError);
-        // Still use the generated code even if saving fails
+        // Try one more time after a short delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const { error: retryError } = await supabase
+          .from('users')
+          .update({ referral_code: newCode })
+          .eq('id', user.id);
+          
+        if (retryError) {
+          console.error('Error saving referral code after retry:', retryError);
+          return '';
+        }
       }
 
       setReferralCode(newCode);
@@ -285,10 +310,7 @@ export const useReferralIntegration = () => {
 
     } catch (error) {
       console.error('Error loading referral code:', error);
-      // Fallback to generating code without saving
-      const fallbackCode = generateReferralCode(user.id);
-      setReferralCode(fallbackCode);
-      return fallbackCode;
+      return '';
     }
   }, [user?.id, generateReferralCode]);
 
@@ -315,7 +337,8 @@ export const useReferralIntegration = () => {
             is_active,
             created_at,
             login_streak,
-            last_active
+            last_active,
+            mining_level
           )
         `)
         .eq('referrer_id', user.id)
@@ -326,15 +349,37 @@ export const useReferralIntegration = () => {
         return;
       }
 
+      // Get STK earnings data
+      const { data: stkEarnings } = await supabase
+        .from('sbt_history')
+        .select('amount, type, metadata')
+        .eq('user_id', user.id);
+
+      // Calculate STK rewards
+      const activeReferralsCount = referrals?.filter(r => r.referred?.is_active).length || 0;
+      const dailySTK = activeReferralsCount * REFERRAL_CONFIG.STK_REWARDS.DAILY_PER_REFERRAL;
+      const totalSTK = stkEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      
+      // Calculate pending level 10 bonuses
+      const pendingLevel10Bonuses = referrals?.filter(r => 
+        r.referred?.mining_level === 10 && 
+        !stkEarnings?.some(e => 
+          e.type === 'level_10_bonus' && 
+          e.metadata?.referral_id === r.referred.id
+        )
+      ).length || 0;
+      
+      const pendingSTK = (pendingLevel10Bonuses * REFERRAL_CONFIG.STK_REWARDS.LEVEL_10_BONUS);
+
       console.log('Loaded referrals:', referrals?.length || 0);
 
-      // Get additional data for friends' TBC coins and other points
+              // Get additional data for friends' TONERS and other points
       const friendIds = referrals?.map(r => r.referred.id) || [];
       let gameDataMap: { [key: string]: any } = {};
       let stakesDataMap: { [key: string]: any[] } = {};
 
       if (friendIds.length > 0) {
-        // Get friends' Divine Mining Game data (TBC Coins)
+        // Get friends' TONERS mining data
         const { data: gameData } = await supabase
           .from('user_game_data')
           .select('user_id, divine_points, total_points_earned, mining_level, game_data')
@@ -346,7 +391,7 @@ export const useReferralIntegration = () => {
             const gameState = data.game_data || {};
             gameDataMap[data.user_id] = {
               ...data,
-              // TBC Coins data
+              // TONERS data
               divinePoints: data.divine_points || gameState.divinePoints || 0,
               totalPointsEarned: data.total_points_earned || gameState.totalPointsEarned || 0,
               miningLevel: data.mining_level || gameState.miningLevel || 1,
@@ -392,24 +437,24 @@ export const useReferralIntegration = () => {
       const totalReferrals = referrals?.length || 0;
       const activeReferrals = referrals?.filter(r => r.referred?.is_active).length || 0;
 
-      // Convert database referrals to display format with TBC Coins prioritized
+              // Convert database referrals to display format with TONERS prioritized
       const referralUsers: ReferralUser[] = (referrals as DatabaseReferral[])?.map(r => {
         const userId = r.referred.id;
         const gameData = gameDataMap[userId];
         const stakesData = stakesDataMap[userId] || [];
         
-        // Get TBC Coins (Divine Points) - this is the primary currency to display
-        const tbcCoins = gameData?.divinePoints || 0;
-        const totalTbcEarned = gameData?.totalPointsEarned || 0;
+                  // Get TONERS (Divine Points) - this is the primary currency to display
+        const tonersCoins = gameData?.divinePoints || 0;
+        const totalTonersEarned = gameData?.totalPointsEarned || 0;
         
         // Calculate friend's total value from multiple sources
         let friendPoints = 0;
         let pointSource: 'tbc_current' | 'tbc_total' | 'staking' | 'stake_potential' | 'sbt' | 'activity' | 'new' = 'new'; // Track the source for display
         
-        // Priority 1: TBC Coins (Divine Points) from mining game
-        if (tbcCoins > 0 || totalTbcEarned > 0) {
-          friendPoints = Math.max(tbcCoins, totalTbcEarned);
-          pointSource = tbcCoins > totalTbcEarned ? 'tbc_current' : 'tbc_total';
+                  // Priority 1: TONERS (Divine Points) from mining game
+        if (tonersCoins > 0 || totalTonersEarned > 0) {
+          friendPoints = Math.max(tonersCoins, totalTonersEarned);
+          pointSource = tonersCoins > totalTonersEarned ? 'tbc_current' : 'tbc_total';
         }
         // Priority 2: Staking earnings (converted to points)
         else if (r.referred.total_earned && Number(r.referred.total_earned) > 0) {
@@ -449,8 +494,8 @@ export const useReferralIntegration = () => {
           total_earned: Number(r.referred.total_earned || 0),
           balance: Number((r.referred as any).balance || 0),
           // Additional data for enhanced display
-          tbcCoins: tbcCoins,
-          totalTbcEarned: totalTbcEarned,
+          tonersCoins: tonersCoins,
+          totalTonersEarned: totalTonersEarned,
           pointSource: pointSource,
           gameData: gameData
         };
@@ -468,7 +513,12 @@ export const useReferralIntegration = () => {
         rewards: { 
           points: Math.floor(totalEarned * 100), 
           gems: Math.floor(totalEarned * 10), 
-          special: [] 
+          special: [],
+          stk: {
+            daily: dailySTK,
+            total: totalSTK,
+            pending: pendingSTK
+          }
         },
         referrals: referralUsers,
         level,
@@ -479,6 +529,30 @@ export const useReferralIntegration = () => {
       console.error('Error loading referral data:', error);
     }
   }, [user?.id, referralCode]);
+
+  // Process daily STK rewards
+  const processDailySTKRewards = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      await referralSystem.processDailySTKRewards(user.id);
+      await loadReferralData(); // Reload data to update UI
+    } catch (error) {
+      console.error('Error processing daily STK rewards:', error);
+    }
+  }, [user?.id, loadReferralData]);
+
+  // Process level 10 bonus
+  const processLevel10Bonus = useCallback(async (referralId: number) => {
+    if (!user?.id) return;
+
+    try {
+      await referralSystem.processLevel10Bonus(user.id, referralId);
+      await loadReferralData(); // Reload data to update UI
+    } catch (error) {
+      console.error('Error processing level 10 bonus:', error);
+    }
+  }, [user?.id, loadReferralData]);
 
   // Process Telegram start parameter for referral tracking
   const processStartParameter = useCallback(async () => {
@@ -517,7 +591,7 @@ export const useReferralIntegration = () => {
       }
       
       // Extract referrer ID from start parameter
-      const referrerIdMatch = startParam.match(/DIVINE(\d{6})/i);
+      const referrerIdMatch = startParam.match(/TONERS(\d{6})/i);
       const referrerId = parseInt(referrerIdMatch![1]);
       
       // Check if user already has a referrer
@@ -902,7 +976,7 @@ export const useReferralIntegration = () => {
       }
       
       // Extract referrer ID
-      const referrerIdMatch = referralCode.match(/DIVINE(\d{6})/i);
+      const referrerIdMatch = referralCode.match(/TONERS(\d{6})/i);
       if (!referrerIdMatch) {
         await trackReferralAttempt(referralCode, 'invalid', 'Invalid code format');
         return { success: false, error: 'Invalid code format' };
@@ -1050,6 +1124,9 @@ export const useReferralIntegration = () => {
     clearReferralHistory,
     loadReferralAttempts,
     forceRefreshReferralData,
-    processReferralCodeManually
+    processReferralCodeManually,
+    // STK reward functions
+    processDailySTKRewards,
+    processLevel10Bonus
   };
 }; 

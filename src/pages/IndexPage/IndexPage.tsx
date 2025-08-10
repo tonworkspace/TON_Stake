@@ -12,35 +12,143 @@ import { GameProvider, useGameContext } from '@/contexts/GameContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { 
   GiCrystalBall, 
-  GiCrystalCluster,
   GiSpellBook,
+  GiShop,
   GiDiamonds
 } from 'react-icons/gi';
 import { BiHome } from 'react-icons/bi';
 // Import gem sync test utilities for debugging
 import '@/utils/gemSyncTest';
 import DailyRewards from '@/components/DailyRewards';
+import SmartStore from '@/components/SmartStore';
 
+// Compact Auto-hide Wallet Connection Banner
+const WalletConnectionBanner: FC<{ NETWORK_NAME: string }> = ({ NETWORK_NAME }) => {
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastInteraction, setLastInteraction] = useState(Date.now());
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+    }, 4000); // Auto-hide after 4 seconds
 
-// interface GameState {
-//   divinePoints: number;
-//   pointsPerSecond: number;
-//   totalEarned24h: number;
-//   totalEarned7d: number;
-//   upgradesPurchased: number;
-//   minersActive: number;
-//   isMining: boolean;
-// }
+    return () => clearTimeout(timer);
+  }, [lastInteraction]);
 
-// interface Upgrade {
-//   id: string;
-//   name: string;
-//   level: number;
-//   effect: string;
-//   baseCost: number;
-//   costMultiplier: number;
-// }
+  const handleInteraction = () => {
+    setLastInteraction(Date.now());
+    setIsVisible(true);
+  };
+
+  if (!isVisible) {
+    return (
+      <div 
+        className="backdrop-blur-xl bg-gradient-to-r from-orange-900/15 to-red-900/15 border border-orange-500/20 rounded-xl p-1.5 mb-2 shadow-[0_2px_12px_0_rgba(0,0,0,0.2)] cursor-pointer transition-all duration-300 hover:from-orange-900/25 hover:to-red-900/25 hover:scale-[1.02]"
+        onClick={handleInteraction}
+      >
+        <div className="flex items-center justify-center space-x-2">
+          <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse"></div>
+          <span className="text-orange-300 font-mono text-[10px] font-medium">🔗 TAP TO CONNECT</span>
+          <div className="text-[8px] text-blue-300 font-mono opacity-60">
+            {NETWORK_NAME}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="backdrop-blur-xl bg-gradient-to-r from-orange-900/20 to-red-900/20 border border-orange-500/20 rounded-xl p-3 mb-2 shadow-[0_4px_20px_0_rgba(0,0,0,0.2)] transition-all duration-300">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse shadow-sm shadow-red-400/50"></div>
+          <span className="text-orange-300 font-bold text-xs tracking-wide">🔗 CONNECT WALLET</span>
+          <div className="text-[10px] text-blue-300 font-mono backdrop-blur-sm bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+            🌐 {NETWORK_NAME}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Connect TON wallet for full features
+        </p>
+        <TonConnectButton />
+      </div>
+    </div>
+  );
+};
+
+// Compact Auto-hide Wallet Status Banner
+const WalletStatusBanner: FC<{ 
+  userFriendlyAddress: string; 
+  NETWORK_NAME: string; 
+  onDisconnect: () => void;
+}> = ({ userFriendlyAddress, NETWORK_NAME, onDisconnect }) => {
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [lastInteraction, setLastInteraction] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMinimized(true);
+    }, 3000); // Auto-minimize after 3 seconds
+
+    return () => clearTimeout(timer);
+  }, [lastInteraction]);
+
+  const handleInteraction = () => {
+    setLastInteraction(Date.now());
+    setIsMinimized(false);
+  };
+
+  if (isMinimized) {
+    return (
+      <div 
+        className="backdrop-blur-xl bg-gradient-to-r from-green-900/15 to-emerald-900/15 border border-green-500/20 rounded-xl p-1.5 mb-2 shadow-[0_2px_12px_0_rgba(0,0,0,0.2)] cursor-pointer transition-all duration-300 hover:from-green-900/25 hover:to-emerald-900/25 hover:scale-[1.02]"
+        onClick={handleInteraction}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-green-300 font-mono text-[10px] font-medium">
+              ✅ {userFriendlyAddress.slice(0, 4)}...{userFriendlyAddress.slice(-3)}
+            </span>
+          </div>
+          <div className="text-[8px] text-blue-300 font-mono opacity-60">
+            {NETWORK_NAME}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="backdrop-blur-xl bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/20 rounded-xl p-3 mb-2 shadow-[0_4px_20px_0_rgba(0,0,0,0.2)] transition-all duration-300">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-sm shadow-green-400/50"></div>
+          <div className="flex flex-col">
+            <span className="text-green-300 font-bold text-xs tracking-wide">WALLET CONNECTED</span>
+            <span className="text-gray-400 font-mono text-[10px]">
+              {userFriendlyAddress.slice(0, 8)}...{userFriendlyAddress.slice(-6)}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center space-x-1">
+          <div className="text-[10px] text-blue-300 font-mono backdrop-blur-sm bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+            🌐 {NETWORK_NAME}
+          </div>
+          <button
+            onClick={onDisconnect}
+            className="text-[10px] text-red-300 font-bold backdrop-blur-sm bg-red-500/10 px-2 py-0.5 rounded-full hover:bg-red-500/20 transition-all duration-200 border border-red-500/20 hover:border-red-500/40 hover:shadow-sm hover:shadow-red-500/20"
+            title="Disconnect Wallet"
+          >
+            🔌
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Header component that uses GameContext
 const GameHeader: FC<{ 
@@ -51,8 +159,26 @@ const GameHeader: FC<{
   isLoadingBalance: boolean;
   NETWORK_NAME: string;
   fetchWalletBalance: () => void;
-}> = ({ user, userFriendlyAddress, walletBalance, isLoadingBalance }) => {
+}> = ({ user, userFriendlyAddress, walletBalance, isLoadingBalance, NETWORK_NAME }) => {
   const { gems, } = useGameContext();
+  const [isExpanded, setIsExpanded] = useState(false); // Start in compact mode
+  const [lastInteraction, setLastInteraction] = useState(0); // Don't auto-expand on mount
+  
+  // Auto-compact logic - only run when there was an interaction
+  useEffect(() => {
+    if (lastInteraction === 0) return; // Don't run on initial mount
+    
+    const timer = setTimeout(() => {
+      setIsExpanded(false);
+    }, 3000); // Auto-compact after 3 seconds of no interaction
+
+    return () => clearTimeout(timer);
+  }, [lastInteraction]);
+
+  const handleInteraction = () => {
+    setLastInteraction(Date.now());
+    setIsExpanded(true);
+  };
   
   // Helper function to format numbers
   const formatNumber = (num: number) => {
@@ -62,79 +188,170 @@ const GameHeader: FC<{
   };
   
   return (
-    <div className="relative bg-gradient-to-r from-slate-900/80 to-gray-900/80 backdrop-blur-xl border border-yellow-500/30 backdrop-blur-xl border border-cyan-500/30 rounded-xl p-4 mb-2 shadow-[0_0_30px_rgba(0,255,255,0.1)] overflow-hidden game-card-frame">
-      {/* Futuristic Corner Accents */}
-      <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-yellow-500/30 corner-accent"></div>
-      <div className="absolute top-0 right-0 w-3 h-3 border-r-2 border-t-2 border-yellow-500/30 corner-accent"></div>
-      <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 border-yellow-500/30 corner-accent"></div>
-      <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-yellow-500/30 corner-accent"></div>
+    <div 
+      className={`relative backdrop-blur-2xl bg-gradient-to-r from-slate-900/60 via-gray-900/40 to-slate-900/60 border border-white/10 rounded-xl mb-2 shadow-[0_4px_24px_0_rgba(0,0,0,0.3)] overflow-hidden transition-all duration-500 cursor-pointer group ${
+        isExpanded ? 'p-3' : 'p-2 hover:border-white/20'
+      }`}
+      onClick={handleInteraction}
+      onMouseEnter={handleInteraction}
+      title={!isExpanded ? "Tap to expand details" : ""}
+    >
+      {/* Enhanced Glassmorphism Border */}
+      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-purple-500/5 to-blue-500/10 p-[1px] transition-all duration-500 ${
+        !isExpanded ? 'animate-pulse' : ''
+      }`} style={{ animationDuration: !isExpanded ? '4s' : undefined }}>
+        <div className="w-full h-full rounded-2xl bg-gradient-to-br from-gray-900/80 to-black/80"></div>
+      </div>
       
-      {/* Dynamic Background Glow */}
-      <div className="absolute inset-0 rounded-xl transition-all duration-1000 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-purple-500/10 animate-pulse"></div>
+      {/* Compact Mode Glow Effect */}
+      {!isExpanded && (
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/5 via-purple-500/3 to-blue-500/5 animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
+      )}
       
-      {/* Single Line Content */}
-      <div className="relative z-10 flex items-center justify-between space-x-2">
-         
-        {/* User Badge */}
+      {/* Animated Corner Accents - Only show when expanded */}
+      {isExpanded && (
+        <>
+          <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-cyan-400/40 rounded-tl-lg animate-pulse"></div>
+          <div className="absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-purple-400/40 rounded-tr-lg animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+          <div className="absolute bottom-2 left-2 w-6 h-6 border-l-2 border-b-2 border-blue-400/40 rounded-bl-lg animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-pink-400/40 rounded-br-lg animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        </>
+      )}
+      
+      {/* Floating Particles - Only show when expanded */}
+      {isExpanded && [...Array(8)].map((_, i) => (
+        <div
+          key={`floating-${i}`}
+          className="absolute w-1 h-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full animate-float opacity-60"
+          style={{
+            top: `${20 + Math.random() * 60}%`,
+            left: `${10 + Math.random() * 80}%`,
+            animationDelay: `${i * 0.5}s`,
+            animationDuration: `${3 + Math.random() * 2}s`
+          }}
+        />
+      ))}
+      
+      {/* Content */}
+      <div className={`relative z-10 transition-all duration-500 ${
+        isExpanded 
+          ? 'flex items-center justify-between space-x-4' 
+          : userFriendlyAddress 
+            ? 'flex items-center justify-between space-x-2'
+            : 'flex items-center justify-center space-x-2'
+      }`}>
+        
+        {/* Compact User Badge - Always visible but different when collapsed */}
         {user?.username && (
-          <div className="flex items-center space-x-1 bg-gradient-to-r from-gray-900/80 to-black/80 rounded-full px-1.5 py-0.5 border border-cyan-500/30 backdrop-blur-sm">
-            <div className="w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold text-black shadow-lg">
-              {user.username.charAt(0).toUpperCase()}
+          <div className={`flex items-center backdrop-blur-xl bg-gradient-to-r from-gray-800/60 to-gray-900/60 rounded-full border border-white/10 shadow-[0_4px_16px_0_rgba(0,0,0,0.3)] transition-all duration-500 ${
+            isExpanded ? 'space-x-3 px-4 py-2' : 'space-x-2 px-2 py-1'
+          }`}>
+            <div className={`relative bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ${
+              isExpanded ? 'w-8 h-8' : 'w-6 h-6'
+            }`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
+              <span className={`relative text-white font-bold transition-all duration-500 ${
+                isExpanded ? 'text-sm' : 'text-xs'
+              }`}>
+                {user.username.charAt(0).toUpperCase()}
+              </span>
+              <div className={`absolute bg-green-400 rounded-full border-2 border-gray-900 animate-pulse transition-all duration-500 ${
+                isExpanded ? '-top-1 -right-1 w-3 h-3' : '-top-0.5 -right-0.5 w-2 h-2'
+              }`}></div>
             </div>
-            <span className="text-cyan-300 font-mono font-bold text-[10px] truncate max-w-[80px]">
-              {user.username}
-            </span>
+            
+            {/* Username - Show based on expansion state */}
+            {isExpanded ? (
+              <div className="flex flex-col">
+                <span className="text-cyan-300 font-mono text-xs opacity-80">
+                  @{user.username.toLowerCase()}
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                <span className="text-cyan-300 font-mono text-xs opacity-80">
+                  @{user.username.slice(0, 6)}{user.username.length > 6 ? '...' : ''}
+                </span>
+                <span className="text-gray-500 font-mono text-[8px] opacity-40">
+                  tap to expand
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Stats Section */}
-        <div className="flex items-center space-x-2">
-          {/* TBC Balance */}
-          {/* <div className="flex items-center space-x-1">
-            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
-            <span className="text-yellow-400 font-mono font-bold text-[9px] uppercase">💰</span>
-            <span className="text-yellow-300 font-mono font-bold text-sm">
-              {formatNumber(points)} TBC
-            </span>
-          </div> */}
-          
-          {/* Separator */}
-          <div className="w-px h-3 bg-gradient-to-b from-transparent via-gray-500/50 to-transparent"></div>
-          
-          {/* Gems */}
-          <div className="flex items-center space-x-1">
-            <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse"></div>
-            <span className="text-purple-400 font-mono font-bold text-[9px] uppercase">💎</span>
-            <span className="text-purple-300 font-mono font-bold text-[11px]">
-              {formatNumber(gems)}
-            </span>
-          </div>
-
-          {/* Wallet Balance */}
-          {userFriendlyAddress && (
-            <>
-              {/* Separator */}
-              <div className="w-px h-3 bg-gradient-to-b from-transparent via-gray-500/50 to-transparent"></div>
-              
-              {/* TON Balance */}
-              <div className="flex items-center space-x-1">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-green-400 font-mono font-bold text-[9px] uppercase">⚡</span>
-                <span className="text-green-300 font-mono font-bold text-[11px]">
-                  {isLoadingBalance ? (
-                    <span className="inline-flex items-center">
-                      <div className="w-2.5 h-2.5 border border-green-400 border-t-transparent rounded-full animate-spin mr-1"></div>
-                      ...
-                    </span>
-                  ) : (
-                    formatNumber(Number(walletBalance))
-                  )} TON
+        {/* Stats Section - Show/hide based on expansion and wallet connection */}
+        {userFriendlyAddress && (
+          <div className={`flex items-center transition-all duration-500 ${
+            isExpanded ? 'space-x-4' : 'space-x-2'
+          }`}>
+            
+            {/* Gems Display - Only show when expanded */}
+            {isExpanded && (
+              <div className="flex items-center space-x-2 backdrop-blur-xl bg-gradient-to-r from-purple-900/40 to-pink-900/40 rounded-full px-4 py-2 border border-purple-500/20">
+                <div className="relative">
+                  <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-white text-xs">💎</span>
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-ping"></div>
+                </div>
+                <span className="text-purple-200 font-bold text-sm">
+                  {formatNumber(gems)}
                 </span>
               </div>
-            </>
+            )}
+            
+            {/* TON Balance - Always show but compact when collapsed */}
+            <div className={`flex items-center backdrop-blur-xl bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-full border border-green-500/20 transition-all duration-500 ${
+              isExpanded ? 'space-x-2 px-4 py-2' : 'space-x-1 px-2 py-1'
+            }`}>
+              <div className="relative">
+                <div className={`bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ${
+                  isExpanded ? 'w-6 h-6' : 'w-4 h-4'
+                }`}>
+                  <span className={`text-white transition-all duration-500 ${
+                    isExpanded ? 'text-xs' : 'text-[10px]'
+                  }`}>⚡</span>
+                </div>
+                {isLoadingBalance && (
+                  <div className="absolute inset-0 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
+                )}
+              </div>
+              <span className={`text-green-200 font-bold transition-all duration-500 ${
+                isExpanded ? 'text-sm' : 'text-xs'
+              }`}>
+                {isLoadingBalance ? '...' : (isExpanded ? formatNumber(Number(walletBalance)) + ' TON' : formatNumber(Number(walletBalance)))}
+              </span>
+            </div>
+            
+            {/* Network Badge - Only show when expanded */}
+            {isExpanded && (
+              <div className="text-xs text-blue-300 font-mono backdrop-blur-sm bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
+                🌐 {NETWORK_NAME}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Expansion Indicator */}
+        <div className={`flex items-center transition-all duration-500 ${
+          isExpanded ? 'opacity-30' : 'opacity-80'
+        }`}>
+          {!isExpanded ? (
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
+                <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse"></div>
+                <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+              <div className="text-[8px] text-gray-400 font-mono opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                TAP
+              </div>
+            </div>
+          ) : (
+            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse scale-75"></div>
           )}
         </div>
-       
       </div>
     </div>
   );
@@ -252,13 +469,7 @@ export const IndexPage: FC = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-  
-  // const connectedAddress = useMemo(() => {
-  //   return isValidAddress(connectedAddressString)
-  //     ? Address.parse(connectedAddressString)
-  //     : null;
-  // }, [connectedAddressString]);
-  
+
   // Get theme-specific colors
   const getThemeColors = () => {
     switch (theme) {
@@ -406,109 +617,174 @@ export const IndexPage: FC = () => {
   // Only show loading on initial load, not when switching tabs
   if (shouldShowLoading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black transition-all duration-1000">
-        {/* Futuristic Background Effects */}
+      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-900 transition-all duration-1000 overflow-hidden">
+        {/* Enhanced Background Effects */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }}></div>
-          <div className="absolute inset-0 opacity-10">
+          {/* Animated Aurora Effect */}
+          <div className="absolute inset-0">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-cyan-500/10 via-purple-500/5 to-blue-500/8 animate-pulse" style={{ animationDuration: '4s' }}></div>
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tl from-pink-500/8 via-transparent to-green-500/6 animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
+          </div>
+          
+          {/* Enhanced Grid Pattern */}
+          <div className="absolute inset-0 opacity-20">
             <div className="w-full h-full" style={{
               backgroundImage: `
-                linear-gradient(rgba(0,255,255,0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,255,255,0.1) 1px, transparent 1px)
+                linear-gradient(rgba(6,182,212,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6,182,212,0.3) 1px, transparent 1px),
+                linear-gradient(rgba(147,51,234,0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(147,51,234,0.2) 1px, transparent 1px)
               `,
-              backgroundSize: '40px 40px'
+              backgroundSize: '60px 60px, 60px 60px, 120px 120px, 120px 120px'
             }}></div>
           </div>
+          
+          {/* Floating Orbs */}
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`orb-${i}`}
+              className="absolute rounded-full opacity-60 animate-float"
+              style={{
+                width: `${Math.random() * 8 + 4}px`,
+                height: `${Math.random() * 8 + 4}px`,
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                background: `linear-gradient(45deg, 
+                  hsl(${Math.random() * 60 + 180}, 70%, 60%), 
+                  hsl(${Math.random() * 60 + 240}, 70%, 60%)
+                )`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${Math.random() * 3 + 4}s`
+              }}
+            />
+          ))}
         </div>
         
-        <div className="relative flex flex-col items-center space-y-6 z-10">
-          {/* Futuristic Loading Animation */}
+        <div className="relative flex flex-col items-center space-y-8 z-10">
+          {/* Enhanced Loading Animation */}
           <div className="relative">
-            {/* Cyberpunk Core */}
-            <div className="relative w-24 h-24">
-              {/* Main Holographic Core */}
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-cyan-500 to-blue-600 rounded-full shadow-[0_0_30px_rgba(0,255,255,0.5)] border-2 border-cyan-400 animate-pulse transition-all duration-1000">
-                {/* Inner Core */}
-                <div className="absolute inset-3 bg-gradient-to-br from-cyan-300 to-cyan-400 rounded-full animate-spin transition-all duration-1000" style={{ animationDuration: '3s' }}>
-                  <div className="absolute inset-2 bg-gradient-to-br from-cyan-200 to-cyan-300 rounded-full animate-pulse transition-all duration-1000"></div>
+            <div className="relative w-32 h-32">
+              {/* Main Core with Glassmorphism */}
+              <div className="absolute inset-0 backdrop-blur-xl bg-gradient-to-br from-cyan-400/20 via-purple-500/15 to-blue-600/20 rounded-full border border-white/20 shadow-[0_0_50px_rgba(6,182,212,0.5)] animate-pulse transition-all duration-1000">
+                {/* Inner Rotating Ring */}
+                <div className="absolute inset-4 bg-gradient-to-br from-cyan-300/30 to-purple-400/30 rounded-full animate-spin backdrop-blur-sm border border-white/10" style={{ animationDuration: '3s' }}>
+                  <div className="absolute inset-3 bg-gradient-to-br from-cyan-200/40 to-blue-300/40 rounded-full animate-pulse backdrop-blur-sm"></div>
                 </div>
+                
+                {/* Central Glow */}
+                <div className="absolute inset-8 bg-gradient-to-br from-white/40 to-cyan-400/40 rounded-full animate-pulse backdrop-blur-lg shadow-inner"></div>
                 
                 {/* Data Nodes */}
-                <div className="absolute top-4 left-4 w-3 h-3 bg-white rounded-full border border-cyan-600 flex items-center justify-center shadow-md transition-all duration-1000">
-                  <div className="w-1.5 h-1.5 bg-cyan-700 rounded-full animate-pulse transition-all duration-1000"></div>
-                </div>
-                <div className="absolute top-4 right-4 w-3 h-3 bg-white rounded-full border border-cyan-600 flex items-center justify-center shadow-md transition-all duration-1000">
-                  <div className="w-1.5 h-1.5 bg-cyan-700 rounded-full animate-pulse transition-all duration-1000"></div>
-                </div>
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={`node-${i}`}
+                    className="absolute w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full border-2 border-white/30 backdrop-blur-sm animate-pulse shadow-lg"
+                    style={{
+                      top: '50%',
+                      left: '50%',
+                      transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateY(-50px)`,
+                      animationDelay: `${i * 0.2}s`
+                    }}
+                  >
+                    <div className="absolute inset-0.5 bg-white/50 rounded-full animate-ping"></div>
+                  </div>
+                ))}
                 
                 {/* Holographic Aura */}
-                <div className="absolute inset-0 bg-cyan-400/30 rounded-full blur-lg animate-pulse transition-all duration-1000"></div>
+                <div className="absolute -inset-4 bg-gradient-to-br from-cyan-400/20 to-purple-500/20 rounded-full blur-xl animate-pulse"></div>
               </div>
               
-              {/* Orbiting Data Particles */}
-              {[...Array(16)].map((_, i) => (
+              {/* Orbiting Elements */}
+              {[...Array(24)].map((_, i) => (
                 <div
-                  key={`particle-${i}`}
-                  className="absolute w-1 h-1 bg-cyan-400 rounded-full shadow-md transition-all duration-1000"
+                  key={`orbit-${i}`}
+                  className="absolute w-2 h-2 rounded-full shadow-lg"
                   style={{
                     top: '50%',
                     left: '50%',
-                    transform: `rotate(${i * 22.5}deg) translateX(50px)`,
-                    animation: `cyberpunk-orbit ${4 + i * 0.2}s linear infinite`,
+                    background: `linear-gradient(45deg, 
+                      hsl(${i * 15 + 180}, 70%, 60%), 
+                      hsl(${i * 15 + 220}, 70%, 70%)
+                    )`,
+                    transform: `translate(-50%, -50%) rotate(${i * 15}deg) translateX(80px)`,
+                    animation: `orbit ${6 + i * 0.1}s linear infinite`,
                     animationDelay: `${i * 0.1}s`
                   }}
                 />
               ))}
             </div>
             
-            {/* Futuristic Energy Waves */}
-            <div className="absolute inset-0 bg-cyan-400/15 rounded-full blur-xl animate-ping transition-all duration-1000" style={{ animationDuration: '2s' }}></div>
-            <div className="absolute inset-0 bg-cyan-300/10 rounded-full blur-2xl animate-ping transition-all duration-1000" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
-            <div className="absolute inset-0 bg-cyan-200/5 rounded-full blur-3xl animate-ping transition-all duration-1000" style={{ animationDuration: '4s', animationDelay: '1s' }}></div>
-          </div>
-          
-          {/* Futuristic Loading Text */}
-          <div className="text-center space-y-3">
-            <div className="text-2xl font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 animate-pulse transition-all duration-1000 tracking-wider">
-              ⚡ DIVINE TAPSTERS ⚡
-            </div>
-            <div className="text-sm text-cyan-300 font-mono font-medium transition-all duration-1000 tracking-wide">
-              Initializing neural interface...
-            </div>
-            <div className="flex items-center justify-center space-x-2">
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce transition-all duration-1000"></div>
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce transition-all duration-1000" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce transition-all duration-1000" style={{ animationDelay: '0.2s' }}></div>
+            {/* Enhanced Energy Waves */}
+            <div className="absolute inset-0">
+              <div className="absolute inset-0 bg-cyan-400/10 rounded-full blur-2xl animate-ping" style={{ animationDuration: '2s' }}></div>
+              <div className="absolute inset-0 bg-purple-400/8 rounded-full blur-3xl animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
+              <div className="absolute inset-0 bg-blue-400/6 rounded-full blur-3xl animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }}></div>
             </div>
           </div>
           
-          {/* Futuristic Loading Status */}
-          <div className="text-center max-w-xs">
-            <div className="text-xs text-cyan-300 bg-black/60 backdrop-blur-sm rounded-lg p-3 border border-cyan-500/30 transition-all duration-1000">
-              <div className="flex items-center space-x-2 mb-2">
-                <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
-                <span className="font-mono font-bold tracking-wider">SYSTEM STATUS: INITIALIZING</span>
+          {/* Enhanced Loading Text */}
+          <div className="text-center space-y-4">
+            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-blue-500 animate-pulse tracking-wider">
+              ⚡ TONERS MINER ⚡
+            </div>
+            <div className="text-lg text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-purple-300 font-medium tracking-wide">
+              Initializing mining systems...
+            </div>
+            <div className="flex items-center justify-center space-x-3">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={`dot-${i}`}
+                  className="w-3 h-3 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 animate-bounce shadow-lg"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* Enhanced Status Panel */}
+          <div className="text-center max-w-sm">
+            <div className="backdrop-blur-xl bg-gradient-to-r from-gray-900/60 to-black/60 rounded-2xl p-6 border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
+              <div className="flex items-center justify-center space-x-3 mb-4">
+                <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-cyan-400 rounded-full animate-pulse shadow-lg"></div>
+                <span className="font-bold text-white tracking-wider">SYSTEM STATUS: INITIALIZING</span>
               </div>
-              <p className="text-gray-300 font-mono text-[10px] tracking-wide">
-                🔮 <span className="font-medium">Cyber Tip:</span> Neural networks are processing...
+              <p className="text-gray-300 text-sm leading-relaxed">
+                🔧 <span className="font-medium text-cyan-300">Mining systems are coming online...</span>
               </p>
+              <div className="mt-4 w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full animate-pulse"></div>
+              </div>
             </div>
           </div>
         </div>
         
-        {/* Futuristic custom CSS animations */}
+        {/* Enhanced CSS animations */}
         <style>{`
-          @keyframes cyberpunk-orbit {
+          @keyframes orbit {
             0% {
-              transform: rotate(0deg) translateX(50px) translateY(-50%);
-              opacity: 0.8;
+              transform: translate(-50%, -50%) rotate(0deg) translateX(80px);
+              opacity: 0.6;
             }
             50% {
               opacity: 1;
             }
             100% {
-              transform: rotate(360deg) translateX(50px) translateY(-50%);
-              opacity: 0.8;
+              transform: translate(-50%, -50%) rotate(360deg) translateX(80px);
+              opacity: 0.6;
+            }
+          }
+          @keyframes float {
+            0%, 100% {
+              transform: translateY(0px) translateX(0px);
+            }
+            25% {
+              transform: translateY(-15px) translateX(8px);
+            }
+            50% {
+              transform: translateY(-8px) translateX(-8px);
+            }
+            75% {
+              transform: translateY(-20px) translateX(5px);
             }
           }
         `}</style>
@@ -519,9 +795,10 @@ export const IndexPage: FC = () => {
   if (error) {
     return (
       <div className={`flex items-center justify-center min-h-screen bg-gradient-to-br ${colors.mainGradient} dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 text-gray-800 dark:text-gray-200 transition-all duration-1000`}>
-        <div className="text-center p-3">
-          <p className="text-red-500 dark:text-red-400 text-sm transition-all duration-1000">{error}</p>
-          <p className="mt-1 text-blue-600 dark:text-blue-400 text-xs transition-all duration-1000">Please open this app in Telegram</p>
+        <div className="text-center p-6 backdrop-blur-xl bg-white/10 rounded-xl border border-white/20 shadow-[0_4px_24px_0_rgba(0,0,0,0.3)] max-w-sm mx-4">
+          <div className="text-4xl mb-3">⚠️</div>
+          <p className="text-red-400 text-base font-medium mb-2">{error}</p>
+          <p className="text-blue-400 text-xs">Please open this app in Telegram</p>
         </div>
       </div>
     );
@@ -531,309 +808,258 @@ export const IndexPage: FC = () => {
     <ErrorBoundary>
       <GameProvider>
         <div className="w-full min-h-screen relative overflow-hidden">
-          {/* Network Warning */}
+          {/* Compact Network Warning */}
           {showNetworkWarning && (
-            <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-red-600 to-red-500 text-white p-3 text-center font-mono font-bold text-sm animate-pulse">
-              ⚠️ NO INTERNET CONNECTION - Some features may be limited
+            <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-gradient-to-r from-red-600/85 to-red-500/85 border-b border-red-400/30 text-white p-2 text-center font-bold text-xs animate-pulse shadow-[0_2px_12px_0_rgba(239,68,68,0.3)]">
+              ⚠️ NO CONNECTION - Limited features
             </div>
           )}
-      {/* Futuristic Cyberpunk Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        {/* Main cyberpunk gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black transition-all duration-1000" />
-        
-        {/* Futuristic energy fields */}
-        <div className="absolute -top-20 -left-20 w-80 h-80 bg-cyan-500/20 rounded-full opacity-60 blur-3xl animate-pulse transition-all duration-1000" style={{ animationDuration: '8s' }} />
-        <div className="absolute top-32 left-1/2 w-96 h-64 bg-blue-600/15 rounded-[60%] opacity-70 blur-3xl animate-pulse transition-all duration-1000" style={{ transform: 'translateX(-50%) rotate(-12deg)', animationDuration: '10s' }} />
-        <div className="absolute bottom-0 right-0 w-[500px] h-80 bg-purple-600/20 rounded-tl-[80%] rounded-tr-[60%] rounded-bl-[60%] rounded-br-[80%] opacity-80 blur-3xl animate-pulse transition-all duration-1000" style={{ animationDuration: '12s' }} />
-        <div className="absolute bottom-20 left-20 w-60 h-48 bg-cyan-400/15 rounded-full opacity-50 blur-3xl animate-pulse transition-all duration-1000" style={{ animationDuration: '14s' }} />
-        
-        {/* Futuristic floating data nodes */}
-        {[...Array(12)].map((_, i) => (
-          <div
-            key={`node-${i}`}
-            className="absolute w-1 h-1 bg-cyan-400 rounded-full animate-ping transition-all duration-1000"
-            style={{
-              top: `${15 + (i * 7)}%`,
-              left: `${8 + (i * 8)}%`,
-              animationDuration: `${2 + i * 0.3}s`,
-              animationDelay: `${i * 0.2}s`
-            }}
-          />
-        ))}
-        
-        {/* Futuristic data particles */}
-        {[...Array(30)].map((_, i) => (
-          <div
-            key={`particle-${i}`}
-            className="absolute w-0.5 h-0.5 bg-cyan-300 rounded-full animate-ping transition-all duration-1000"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDuration: `${1.5 + Math.random() * 3}s`,
-              animationDelay: `${Math.random() * 2}s`
-            }}
-          />
-        ))}
-        
-        {/* Futuristic cyberpunk grid overlay */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="w-full h-full" style={{
-            backgroundImage: `
-              linear-gradient(rgba(0,255,255,0.3) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,255,255,0.3) 1px, transparent 1px)
-            `,
-            backgroundSize: '40px 40px'
-          }}></div>
-        </div>
-        
-        {/* Futuristic scan lines */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent animate-pulse transition-all duration-1000" style={{ animationDuration: '4s' }} />
-        
-        {/* Futuristic corner energy fields */}
-        <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/20 rounded-br-full blur-2xl animate-pulse transition-all duration-1000" style={{ animationDuration: '6s' }} />
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-bl-full blur-2xl animate-pulse transition-all duration-1000" style={{ animationDuration: '7s' }} />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-600/20 rounded-tr-full blur-2xl animate-pulse transition-all duration-1000" style={{ animationDuration: '8s' }} />
-        <div className="absolute bottom-0 right-0 w-32 h-32 bg-cyan-400/20 rounded-tl-full blur-2xl animate-pulse transition-all duration-1000" style={{ animationDuration: '9s' }} />
-        
-        {/* Futuristic circuit patterns */}
-        <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent animate-pulse" style={{ animationDuration: '5s' }} />
-        <div className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent animate-pulse" style={{ animationDuration: '6s' }} />
-        <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-purple-500/30 to-transparent animate-pulse" style={{ animationDuration: '7s' }} />
-        <div className="absolute top-0 left-3/4 w-px h-full bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent animate-pulse" style={{ animationDuration: '8s' }} />
-        
-        {/* Futuristic holographic interference */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/2 to-transparent animate-pulse" style={{ animationDuration: '10s' }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-500/2 to-transparent animate-pulse" style={{ animationDuration: '12s' }} />
-      </div>
+
+          {/* Enhanced Modern Background */}
+          <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+            {/* Main Gradient Base */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-gray-900 to-black" />
+            
+            {/* Animated Mesh Background */}
+            <div className="absolute inset-0">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/8 via-purple-500/4 to-blue-500/6 animate-pulse" style={{ animationDuration: '8s' }} />
+              <div className="absolute inset-0 bg-gradient-to-tl from-pink-500/4 via-transparent to-emerald-500/6 animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
+            </div>
+            
+            {/* Enhanced Energy Fields */}
+            <div className="absolute -top-40 -left-40 w-96 h-96 bg-gradient-to-br from-cyan-500/15 to-blue-600/10 rounded-full blur-3xl animate-pulse opacity-70" style={{ animationDuration: '10s' }} />
+            <div className="absolute top-20 right-10 w-80 h-80 bg-gradient-to-br from-purple-500/12 to-pink-500/8 rounded-full blur-3xl animate-pulse opacity-60" style={{ animationDuration: '12s', animationDelay: '1s' }} />
+            <div className="absolute bottom-20 left-20 w-72 h-72 bg-gradient-to-br from-emerald-500/10 to-cyan-500/8 rounded-full blur-3xl animate-pulse opacity-50" style={{ animationDuration: '14s', animationDelay: '2s' }} />
+            <div className="absolute bottom-0 right-0 w-[600px] h-96 bg-gradient-to-tl from-blue-600/12 to-purple-600/8 rounded-tl-full blur-3xl animate-pulse opacity-80" style={{ animationDuration: '16s', animationDelay: '3s' }} />
+            
+            {/* Enhanced Floating Elements */}
+            {[...Array(30)].map((_, i) => (
+              <div
+                key={`float-${i}`}
+                className="absolute rounded-full animate-float opacity-40"
+                style={{
+                  width: `${Math.random() * 6 + 2}px`,
+                  height: `${Math.random() * 6 + 2}px`,
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  background: `linear-gradient(45deg, 
+                    hsl(${Math.random() * 60 + 180}, 70%, 60%), 
+                    hsl(${Math.random() * 60 + 240}, 70%, 70%)
+                  )`,
+                  animationDelay: `${Math.random() * 5}s`,
+                  animationDuration: `${Math.random() * 4 + 6}s`,
+                  boxShadow: '0 0 20px currentColor'
+                }}
+              />
+            ))}
+            
+            {/* Enhanced Grid Pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="w-full h-full" style={{
+                backgroundImage: `
+                  linear-gradient(rgba(6,182,212,0.5) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(6,182,212,0.5) 1px, transparent 1px),
+                  linear-gradient(rgba(147,51,234,0.3) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(147,51,234,0.3) 1px, transparent 1px)
+                `,
+                backgroundSize: '80px 80px, 80px 80px, 160px 160px, 160px 160px'
+              }}></div>
+            </div>
+            
+            {/* Enhanced Scan Lines */}
+            <div className="absolute inset-0">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent animate-pulse" style={{ animationDuration: '6s' }} />
+              <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent animate-pulse" style={{ animationDuration: '8s', animationDelay: '1s' }} />
+              <div className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/35 to-transparent animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+              <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-500/25 to-transparent animate-pulse" style={{ animationDuration: '12s', animationDelay: '3s' }} />
+              
+              <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-cyan-500/30 to-transparent animate-pulse" style={{ animationDuration: '7s' }} />
+              <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-purple-500/25 to-transparent animate-pulse" style={{ animationDuration: '9s', animationDelay: '1.5s' }} />
+            </div>
+            
+            {/* Enhanced Corner Effects */}
+            <div className="absolute top-0 left-0 w-40 h-40 bg-gradient-to-br from-cyan-500/15 to-transparent rounded-br-3xl blur-2xl animate-pulse" style={{ animationDuration: '8s' }} />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-purple-500/15 to-transparent rounded-bl-3xl blur-2xl animate-pulse" style={{ animationDuration: '10s', animationDelay: '1s' }} />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-tr from-emerald-500/15 to-transparent rounded-tr-3xl blur-2xl animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
+            <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-blue-500/15 to-transparent rounded-tl-3xl blur-2xl animate-pulse" style={{ animationDuration: '14s', animationDelay: '3s' }} />
+            
+            {/* Holographic Interference */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/1 to-transparent animate-pulse" style={{ animationDuration: '15s' }} />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/1 to-transparent animate-pulse" style={{ animationDuration: '18s', animationDelay: '2s' }} />
+          </div>
       
-      <div className="relative z-10">
-        {!isLoading && user && <OnboardingScreen />}
+          <div className="relative z-10">
+            {!isLoading && user && <OnboardingScreen />}
 
-                 {/* Enhanced Cyberpunk Main Content Area */}
-         <div className="flex-1 pb-20 px-4 pt-4 max-w-md mx-auto">
+            {/* Compact Main Content Area */}
+            <div className="flex-1 pb-20 px-3 pt-3 max-w-md mx-auto">
            
-           {/* Ultra-Compact Cyberpunk Stats Header */}
-           {userFriendlyAddress && (
-             <GameHeader 
-               user={user} 
-               currentTab={currentTab}
-               userFriendlyAddress={userFriendlyAddress}
-               walletBalance={walletBalance}
-               isLoadingBalance={isLoadingBalance}
-               NETWORK_NAME={NETWORK_NAME}
-               fetchWalletBalance={fetchWalletBalance}
-             />
-           )}
+              {/* Enhanced Header */}
+              {userFriendlyAddress && (
+                <GameHeader 
+                  user={user} 
+                  currentTab={currentTab}
+                  userFriendlyAddress={userFriendlyAddress}
+                  walletBalance={walletBalance}
+                  isLoadingBalance={isLoadingBalance}
+                  NETWORK_NAME={NETWORK_NAME}
+                  fetchWalletBalance={fetchWalletBalance}
+                />
+              )}
 
-           {/* Compact Wallet Connection Section */}
-           {!userFriendlyAddress && (
-             <div className="bg-gradient-to-r from-orange-900/30 to-red-900/30 border border-orange-500/20 rounded-lg p-2 mb-2">
-               <div className="flex items-center justify-between">
-                 <div className="flex items-center space-x-2">
-                   <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></div>
-                   <span className="text-orange-400 font-mono font-bold text-[10px]">🔗 CONNECT WALLET</span>
-                 </div>
-                 <div className="text-[9px] text-blue-400 font-mono bg-blue-500/10 px-1.5 py-0.5 rounded">
-                   🌐 {NETWORK_NAME}
-                 </div>
-               </div>
-               <div className="flex items-center justify-between mt-1.5">
-                 <p className="text-[9px] text-gray-300">
-                   Connect your TON wallet to access all features
-                 </p>
-                 <TonConnectButton 
-                   className=""
-                 />
-               </div>
-             </div>
-           )}
+                            {/* Auto-hide Wallet Connection Banner */}
+              {!userFriendlyAddress && (
+                <WalletConnectionBanner NETWORK_NAME={NETWORK_NAME} />
+              )}
 
-           {/* Compact Wallet Status Bar */}
-           {userFriendlyAddress && (
-             <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/20 rounded-lg p-2 mb-2">
-               <div className="flex items-center justify-between">
-                 <div className="flex items-center space-x-2">
-                   <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                   <span className="text-green-400 font-mono font-bold text-[10px]">WALLET CONNECTED</span>
-                   <span className="text-gray-400 font-mono text-[9px]">
-                     {userFriendlyAddress.slice(0, 6)}...{userFriendlyAddress.slice(-4)}
-                   </span>
-                 </div>
-                 <div className="flex items-center space-x-2">
-                   <div className="text-[9px] text-blue-400 font-mono bg-blue-500/10 px-1.5 py-0.5 rounded">
-                     🌐 {NETWORK_NAME}
-                   </div>
-                   <button
-                     onClick={handleDisconnectWallet}
-                     className="text-[9px] text-red-400 font-mono bg-red-500/10 px-1.5 py-0.5 rounded hover:bg-red-500/20 transition-colors duration-200 border border-red-500/20 hover:border-red-500/40"
-                     title="Disconnect Wallet"
-                   >
-                     🔌
-                   </button>
-                 </div>
-               </div>
-             </div>
-           )}
+              {/* Auto-hide Wallet Status Banner */}
+              {userFriendlyAddress && (
+                <WalletStatusBanner 
+                  userFriendlyAddress={userFriendlyAddress}
+                  NETWORK_NAME={NETWORK_NAME}
+                  onDisconnect={handleDisconnectWallet}
+                />
+              )}
 
-          {currentTab === 'zodiac' && <DivineMiningGame />}
-          {currentTab === 'daily' && <DailyRewards />}
-          {currentTab === 'divine' && <DivinePointsLeaderboard />}
-
-          {currentTab === 'crystals' && (
-            <div className="flex-1 overflow-y-auto">
-              <TaskCenter/>
+              {/* Content Sections */}
+              {currentTab === 'zodiac' && <DivineMiningGame />}
+              {currentTab === 'daily' && <DailyRewards />}
+              {currentTab === 'divine' && <DivinePointsLeaderboard />}
+              {currentTab === 'store' && <SmartStore />}
+              {currentTab === 'crystals' && (
+                <div className="flex-1 overflow-y-auto">
+                  <TaskCenter/>
+                </div>
+              )}
+              {currentTab === 'spells' && (
+                <div className="flex-1 overflow-y-auto">
+                  <ReferralSystem />
+                </div>
+              )}
             </div>
-          )}
 
-          {currentTab === 'spells' && (
-            <div className="flex-1 overflow-y-auto">
-              <ReferralSystem />
+            {/* Compact Bottom Navigation */}
+            <div className="fixed bottom-0 left-0 right-0 backdrop-blur-2xl bg-gradient-to-t from-black/95 via-gray-900/85 to-black/95 border-t border-white/10 safe-area-pb z-40 shadow-[0_-4px_20px_0_rgba(0,0,0,0.3)] overflow-hidden">
+              {/* Compact Top Border */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent animate-pulse" style={{ animationDuration: '4s' }}></div>
+              
+              {/* Subtle Holographic Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/1 via-transparent to-transparent animate-pulse" style={{ animationDuration: '8s' }}></div>
+              
+              <div className="max-w-lg mx-auto px-3 py-3 relative">
+                <div className="grid grid-cols-5 items-center gap-2">
+                  {[
+                    { id: 'zodiac', text: 'Mine', Icon: BiHome, colors: ['from-cyan-500', 'to-blue-600', 'cyan'] },
+                    { id: 'daily', text: 'Rewards', Icon: GiCrystalBall, colors: ['from-purple-500', 'to-pink-600', 'purple'] },
+                    { id: 'divine', text: 'Leaderboard', Icon: GiDiamonds, colors: ['from-yellow-500', 'to-orange-600', 'yellow'] },
+                    { id: 'store', text: 'Store', Icon: GiShop, colors: ['from-cyan-500', 'to-blue-600', 'cyan'] },
+                    // { id: 'crystals', text: 'Tasks', Icon: GiCrystalCluster, colors: ['from-emerald-500', 'to-green-600', 'emerald'] },
+                    { id: 'spells', text: 'Referrals', Icon: GiSpellBook, colors: ['from-pink-500', 'to-rose-600', 'pink'] },
+                  ].map(({ id, text, Icon, colors }) => {
+                    const isActive = currentTab === id;
+                    const [fromColor, toColor, baseColor] = colors;
+                    
+                    return (
+                      <button 
+                        key={id} 
+                        aria-label={text}
+                        onClick={() => setCurrentTab(id)}
+                        className={`
+                          group relative flex flex-col items-center py-2 px-1 w-full transition-all duration-300 rounded-xl
+                          ${isActive ? 'scale-105' : 'hover:scale-102'}
+                        `}
+                      >
+                        {/* Compact Icon Container */}
+                        <div className={`
+                          relative flex items-center justify-center rounded-xl transition-all duration-300 mb-1 border backdrop-blur-xl
+                          ${isActive 
+                            ? `bg-gradient-to-br ${fromColor}/20 ${toColor}/15 border-${baseColor}-400/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]` 
+                            : 'bg-gray-800/40 border-gray-600/30 hover:bg-gray-700/50 hover:border-gray-500/40'
+                          }
+                        `}
+                          style={{
+                            width: 40,
+                            height: 40,
+                          }}
+                        >
+                          {/* Compact Glow Effects */}
+                          {isActive && (
+                            <>
+                              <div className="absolute inset-0 bg-gradient-to-br from-white/8 to-transparent rounded-xl animate-pulse" style={{ animationDuration: '2s' }}></div>
+                              <div className={`absolute -inset-0.5 bg-gradient-to-br ${fromColor}/15 ${toColor}/10 rounded-xl blur-sm animate-pulse`} style={{ animationDuration: '3s' }}></div>
+                            </>
+                          )}
+                          
+                          {/* Minimal Particles for Active Tab */}
+                          {isActive && (
+                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-gradient-to-br from-white to-current rounded-full animate-ping opacity-60"></div>
+                          )}
+                          
+                          <Icon 
+                            size={18} 
+                            className={`
+                              relative z-10 transition-all duration-300
+                              ${isActive 
+                                ? `text-white filter drop-shadow-[0_0_8px_currentColor]` 
+                                : 'text-gray-400 group-hover:text-gray-200 group-hover:drop-shadow-[0_0_4px_currentColor]'
+                              }
+                            `} 
+                          />
+                        </div>
+                        
+                        {/* Compact Text */}
+                        <span className={`
+                          text-[9px] font-bold tracking-wide truncate max-w-[50px] text-center transition-all duration-300 uppercase
+                          ${isActive 
+                            ? 'text-white filter drop-shadow-[0_0_4px_currentColor]' 
+                            : 'text-gray-400 group-hover:text-gray-200'
+                          }
+                        `}>
+                          {text}
+                        </span>
+                        
+                        {/* Compact Active Indicator */}
+                        {isActive && (
+                          <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r ${fromColor} ${toColor} rounded-full animate-pulse shadow-sm`}></div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Compact Bottom Effects */}
+              <div className="absolute bottom-0 left-0 right-0">
+                <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent animate-pulse" style={{ animationDuration: '6s' }}></div>
+              </div>
             </div>
-          )}
-
+          </div>
         </div>
-
-                 {/* Enhanced Cyberpunk Bottom Navigation */}
-         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/98 via-gray-900/95 to-black/98 backdrop-blur-2xl border-t border-cyan-500/40 safe-area-pb z-40 shadow-[0_-8px_32px_0_rgba(0,255,255,0.15)] transition-all duration-300 overflow-hidden">
-           {/* Enhanced Top Border with Animation */}
-           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-500/60 to-transparent animate-pulse" style={{ animationDuration: '4s' }}></div>
-           
-           {/* Holographic Scan Effect */}
-           <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/2 via-transparent to-transparent animate-pulse" style={{ animationDuration: '5s' }}></div>
-           
-           <div className="max-w-lg mx-auto px-3 py-3 relative">
-             <div className="grid grid-cols-5 items-center gap-2">
-               {[
-                 { id: 'zodiac', text: 'Mine', Icon: BiHome, color: 'cyan' },
-                 { id: 'daily', text: 'Rewards', Icon: GiCrystalBall, color: 'purple' },
-                 { id: 'divine', text: 'Leaderboard', Icon: GiDiamonds, color: 'yellow' },
-                 { id: 'crystals', text: 'Tasks', Icon: GiCrystalCluster, color: 'green' },
-                 { id: 'spells', text: 'Referrals', Icon: GiSpellBook, color: 'pink' }, 
-               ].map(({ id, text, Icon, color }) => {
-                 const isActive = currentTab === id;
-                 
-                 const getColorClasses = (colorName: string, active: boolean) => {
-                   const colors = {
-                     cyan: {
-                       bg: active ? 'from-cyan-500/80 to-cyan-600/60' : 'from-gray-700/80 to-gray-800/60',
-                       border: active ? 'border-cyan-400/60' : 'border-gray-600/40',
-                       text: active ? 'text-cyan-300' : 'text-gray-400',
-                       glow: active ? 'shadow-[0_0_20px_rgba(6,182,212,0.4)]' : '',
-                       hover: 'group-hover:from-cyan-600/60 group-hover:to-cyan-700/40 group-hover:border-cyan-500/50'
-                     },
-                     purple: {
-                       bg: active ? 'from-purple-500/80 to-purple-600/60' : 'from-gray-700/80 to-gray-800/60',
-                       border: active ? 'border-purple-400/60' : 'border-gray-600/40',
-                       text: active ? 'text-purple-300' : 'text-gray-400',
-                       glow: active ? 'shadow-[0_0_20px_rgba(147,51,234,0.4)]' : '',
-                       hover: 'group-hover:from-purple-600/60 group-hover:to-purple-700/40 group-hover:border-purple-500/50'
-                     },
-                     yellow: {
-                       bg: active ? 'from-yellow-500/80 to-yellow-600/60' : 'from-gray-700/80 to-gray-800/60',
-                       border: active ? 'border-yellow-400/60' : 'border-gray-600/40',
-                       text: active ? 'text-yellow-300' : 'text-gray-400',
-                       glow: active ? 'shadow-[0_0_20px_rgba(251,191,36,0.4)]' : '',
-                       hover: 'group-hover:from-yellow-600/60 group-hover:to-yellow-700/40 group-hover:border-yellow-500/50'
-                     },
-                     green: {
-                       bg: active ? 'from-emerald-500/80 to-emerald-600/60' : 'from-gray-700/80 to-gray-800/60',
-                       border: active ? 'border-emerald-400/60' : 'border-gray-600/40',
-                       text: active ? 'text-emerald-300' : 'text-gray-400',
-                       glow: active ? 'shadow-[0_0_20px_rgba(16,185,129,0.4)]' : '',
-                       hover: 'group-hover:from-emerald-600/60 group-hover:to-emerald-700/40 group-hover:border-emerald-500/50'
-                     },
-                     pink: {
-                       bg: active ? 'from-pink-500/80 to-pink-600/60' : 'from-gray-700/80 to-gray-800/60',
-                       border: active ? 'border-pink-400/60' : 'border-gray-600/40',
-                       text: active ? 'text-pink-300' : 'text-gray-400',
-                       glow: active ? 'shadow-[0_0_20px_rgba(236,72,153,0.4)]' : '',
-                       hover: 'group-hover:from-pink-600/60 group-hover:to-pink-700/40 group-hover:border-pink-500/50'
-                     }
-                   };
-                   return colors[colorName as keyof typeof colors];
-                 };
-                 
-                 const colorClasses = getColorClasses(color, isActive);
-                 
-                 return (
-                   <button 
-                     key={id} 
-                     aria-label={text}
-                     onClick={() => setCurrentTab(id)}
-                     className={`
-                       group relative flex flex-col items-center py-2 px-1 w-full transition-all duration-300 rounded-xl
-                       ${isActive ? 'scale-105' : 'hover:scale-102'}
-                     `}
-                   >
-                     {/* Enhanced Icon Container */}
-                     <div className={`
-                       relative flex items-center justify-center rounded-xl transition-all duration-300 mb-1.5 border-2
-                       bg-gradient-to-br ${colorClasses.bg} ${colorClasses.border} ${colorClasses.glow} ${colorClasses.hover}
-                     `}
-                       style={{
-                         width: 40,
-                         height: 40,
-                       }}
-                     >
-                       {/* Enhanced Glow Effect */}
-                       {isActive && (
-                         <>
-                           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl animate-pulse" style={{ animationDuration: '2s' }}></div>
-                           <div className="absolute -inset-1 bg-gradient-to-br from-current/20 to-transparent rounded-xl blur-sm animate-pulse" style={{ animationDuration: '3s' }}></div>
-                         </>
-                       )}
-                       
-                       {/* Floating Particles for Active Tab */}
-                       {isActive && (
-                         <>
-                           <div className="absolute top-0 right-0 w-1 h-1 bg-current rounded-full animate-ping opacity-60"></div>
-                           <div className="absolute bottom-0 left-0 w-1 h-1 bg-current rounded-full animate-ping opacity-40" style={{ animationDelay: '0.5s' }}></div>
-                         </>
-                       )}
-                       
-                       <Icon 
-                         size={18} 
-                         className={`
-                           relative z-10 transition-all duration-300
-                           ${isActive 
-                             ? 'text-white filter drop-shadow-[0_0_8px_currentColor]' 
-                             : 'text-gray-300 group-hover:text-white group-hover:drop-shadow-[0_0_4px_currentColor]'
-                           }
-                         `} 
-                       />
-                     </div>
-                     
-                     {/* Enhanced Text */}
-                     <span className={`
-                       text-[9px] font-mono font-bold tracking-wider truncate max-w-[55px] text-center transition-all duration-300 uppercase
-                       ${colorClasses.text} group-hover:text-gray-300
-                       ${isActive ? 'filter drop-shadow-[0_0_4px_currentColor]' : ''}
-                     `}>
-                       {text}
-                     </span>
-                     
-                     {/* Enhanced Active Indicator */}
-                     {isActive && (
-                       <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-current rounded-full animate-pulse"></div>
-                     )}
-                   </button>
-                 );
-               })}
-             </div>
-           </div>
-           
-           {/* Enhanced Bottom Effects */}
-           <div className="absolute bottom-0 left-0 right-0">
-             <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent animate-pulse" style={{ animationDuration: '6s' }}></div>
-             <div className="h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent animate-pulse" style={{ animationDuration: '8s', animationDelay: '1s' }}></div>
-           </div>
-         </div>
-               </div>
-      </div>
-        </GameProvider>
-      </ErrorBoundary>
-    );
-  };
+        
+        {/* Enhanced Global Styles */}
+        <style>{`
+          @keyframes float {
+            0%, 100% {
+              transform: translateY(0px) translateX(0px) rotate(0deg);
+            }
+            25% {
+              transform: translateY(-15px) translateX(8px) rotate(90deg);
+            }
+            50% {
+              transform: translateY(-8px) translateX(-8px) rotate(180deg);
+            }
+            75% {
+              transform: translateY(-20px) translateX(5px) rotate(270deg);
+            }
+          }
+          
+          .safe-area-pb {
+            padding-bottom: env(safe-area-inset-bottom);
+          }
+        `}</style>
+      </GameProvider>
+    </ErrorBoundary>
+  );
+};
 
 

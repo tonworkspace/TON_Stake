@@ -36,7 +36,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return `${baseKey}_${userId}`;
   };
   
-  // Points are now managed by DivineMiningGame - this is just for display
+  // Points are now managed by TonersGame - this is just for display
   const [points, setPoints] = useState(() => {
     const userId = user?.id ? user.id.toString() : undefined;
     const userPointsKey = getUserSpecificKey('spiritualEssencePoints', userId);
@@ -46,7 +46,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   const [gems, setGems] = useState(() => {
     const userId = user?.id ? user.id.toString() : undefined;
-    const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
+    const userGemsKey = getUserSpecificKey('tonersGems', userId);
     const saved = localStorage.getItem(userGemsKey);
     return saved ? parseInt(saved, 10) : 10;
   });
@@ -92,13 +92,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     console.log(`💎 Gem Transaction: +${amount} from ${source} | New Total: ${newTotal} | User: ${userId}`);
   }, [user?.id]);
 
-  // Real-time sync with DivineMiningGame localStorage
+  // Real-time sync with TonersGame localStorage
   useEffect(() => {
-    const syncWithDivineMining = () => {
+    const syncWithToners = () => {
       const userId = user?.id ? user.id.toString() : undefined;
       const userPointsKey = getUserSpecificKey('spiritualEssencePoints', userId);
-      const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
-      const userBoostsKey = getUserSpecificKey('divineMiningBoosts', userId);
+      const userGemsKey = getUserSpecificKey('tonersGems', userId);
+      const userBoostsKey = getUserSpecificKey('tonersBoosts', userId);
       
       const savedPoints = localStorage.getItem(userPointsKey);
       const savedGems = localStorage.getItem(userGemsKey);
@@ -144,20 +144,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     };
 
     // Sync immediately
-    syncWithDivineMining();
+    syncWithToners();
 
     // Set up interval for real-time sync
-    const syncInterval = setInterval(syncWithDivineMining, 1000); // Sync every second
+    const syncInterval = setInterval(syncWithToners, 1000); // Sync every second
 
     // Also listen for storage events (when localStorage changes in other tabs)
     const handleStorageChange = (e: StorageEvent) => {
       const userId = user?.id ? user.id.toString() : undefined;
       const userPointsKey = getUserSpecificKey('spiritualEssencePoints', userId);
-      const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
-      const userBoostsKey = getUserSpecificKey('divineMiningBoosts', userId);
+      const userGemsKey = getUserSpecificKey('tonersGems', userId);
+      const userBoostsKey = getUserSpecificKey('tonersBoosts', userId);
       
       if (e.key === userPointsKey || e.key === userGemsKey || e.key === userBoostsKey) {
-        syncWithDivineMining();
+        syncWithToners();
       }
     };
 
@@ -172,13 +172,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   // Save gems to localStorage whenever state changes
   useEffect(() => {
     const userId = user?.id ? user.id.toString() : undefined;
-    const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
+    const userGemsKey = getUserSpecificKey('tonersGems', userId);
     localStorage.setItem(userGemsKey, gems.toString());
   }, [gems, user?.id]);
 
   useEffect(() => {
     const userId = user?.id ? user.id.toString() : undefined;
-    const userBoostsKey = getUserSpecificKey('divineMiningBoosts', userId);
+    const userBoostsKey = getUserSpecificKey('tonersBoosts', userId);
     localStorage.setItem(userBoostsKey, JSON.stringify(activeBoosts));
   }, [activeBoosts, user?.id]);
 

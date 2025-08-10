@@ -105,7 +105,7 @@ export const ReferralPrompt: React.FC<ReferralPromptProps> = ({ onClose, onSucce
               setReferralCode(e.target.value.toUpperCase());
               setError('');
             }}
-            placeholder="DIVINE123456ABCD"
+                          placeholder="TONERS123456ABCD"
             className="w-full bg-black/50 border border-cyan-400/30 rounded-lg px-4 py-3 text-white font-mono text-sm tracking-wider placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all duration-300"
             disabled={isProcessing}
           />

@@ -201,7 +201,7 @@ const code = `${baseCode}${suffix}`;
 
 ### Testing a Referral Code
 ```javascript
-const result = await testReferralCode('DIVINE123456ABCD');
+const result = await testReferralCode('TONERS123456ABCD');
 if (result.success) {
   console.log(`Valid code! Referrer: ${result.referrer}`);
 } else {
@@ -227,7 +227,7 @@ await trackReferralAttempt(
 
 ### Validating a Code
 ```javascript
-const validation = validateReferralCode('DIVINE123456ABCD');
+const validation = validateReferralCode('TONERS123456ABCD');
 if (!validation.isValid) {
   console.log(`Validation failed: ${validation.error}`);
 }

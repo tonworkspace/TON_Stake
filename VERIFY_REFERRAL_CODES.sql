@@ -43,7 +43,7 @@ SELECT
     referral_code,
     CASE 
         WHEN referral_code IS NULL THEN 'No Code'
-        WHEN referral_code ~ '^DIVINE\d{6}[A-Z0-9]{4}$' THEN '✅ Valid Format'
+        WHEN referral_code ~ '^TONERS\d{6}[A-Z0-9]{4}$' THEN '✅ Valid Format'
         ELSE '❌ Invalid Format'
     END as format_check
 FROM users
@@ -57,7 +57,7 @@ SELECT
     id,
     username,
     referral_code,
-    'https://t.me/DivineTaps_bot/mine?startapp=' || referral_code as referral_link
+    'https://t.me/Tonstak3it_bot/start?startapp=' || referral_code as referral_link
 FROM users
 WHERE referral_code IS NOT NULL
 ORDER BY id;

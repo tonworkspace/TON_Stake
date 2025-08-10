@@ -18,6 +18,13 @@
   user-select: none;
 }
 
+/* Enhanced Mobile Touch Targets */
+.referral-system button {
+  min-height: 44px; /* iOS minimum touch target */
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
 /* Stable container heights */
 .referral-system .space-y-2 > * {
   min-height: 60px;
@@ -27,23 +34,59 @@
   min-height: 80px;
 }
 
+.referral-system .space-y-4 > * {
+  min-height: 100px;
+}
+
 /* Custom scrollbar for referral lists */
 .referral-system .game-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px; /* Slightly wider for mobile */
 }
 
 .referral-system .game-scrollbar::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .referral-system .game-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #00ffff, #0080ff);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .referral-system .game-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #00ffff, #0066cc);
+}
+
+/* Fade In Animation for QR Code and Modal Elements */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Enhanced Loading Animation */
+@keyframes loadingPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.loading-pulse {
+  animation: loadingPulse 2s ease-in-out infinite;
 }
 
 /* Animation for referral code display */
@@ -74,14 +117,38 @@
   animation: progressFill 1s ease-out;
 }
 
-/* Referral card hover effects */
-.referral-card {
-  transition: all 0.3s ease;
+/* Enhanced Hover Effects for Mobile */
+@media (hover: hover) {
+  /* Referral card hover effects */
+  .referral-card {
+    transition: all 0.3s ease;
+  }
+
+  .referral-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 255, 255, 0.2);
+  }
+
+  /* Share button animations */
+  .share-button {
+    transition: all 0.3s ease;
+  }
+
+  .share-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+  }
 }
 
-.referral-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 255, 255, 0.2);
+/* Touch-friendly hover states for mobile */
+@media (hover: none) {
+  .referral-card:active {
+    transform: scale(0.98);
+  }
+
+  .share-button:active {
+    transform: scale(0.95);
+  }
 }
 
 /* Reward tier animations */
@@ -107,16 +174,6 @@
   100% {
     transform: scale(1);
   }
-}
-
-/* Share button animations */
-.share-button {
-  transition: all 0.3s ease;
-}
-
-.share-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
 }
 
 /* Copy feedback animation */
@@ -210,10 +267,50 @@
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Responsive adjustments */
+/* Enhanced Button Animations */
+@keyframes buttonPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 255, 0);
+  }
+}
+
+.btn-pulse {
+  animation: buttonPulse 2s infinite;
+}
+
+/* Gradient Text Animation */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-text {
+  background: linear-gradient(-45deg, #00ffff, #0080ff, #8000ff, #ff0080);
+  background-size: 400% 400%;
+  animation: gradientShift 3s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Enhanced Mobile Responsiveness */
 @media (max-width: 640px) {
   .referral-system .grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
   
   .referral-system .flex {
@@ -222,10 +319,47 @@
   
   .referral-system .text-2xl {
     font-size: 1.25rem;
+    line-height: 1.75rem;
   }
   
   .referral-system .text-lg {
     font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  
+  .referral-system .text-xl {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+  
+  .referral-system .p-6 {
+    padding: 1rem;
+  }
+  
+  .referral-system .p-4 {
+    padding: 0.75rem;
+  }
+  
+  /* Larger touch targets on mobile */
+  .referral-system button {
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Better spacing for mobile */
+  .referral-system .space-y-4 > * + * {
+    margin-top: 1rem;
+  }
+  
+  .referral-system .space-y-6 > * + * {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .referral-system .grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -245,6 +379,10 @@
   .referral-system .text-gray-400 {
     color: #9ca3af;
   }
+  
+  .referral-system button {
+    border: 2px solid currentColor;
+  }
 }
 
 /* Reduced motion support */
@@ -253,5 +391,26 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  
+  .referral-system .animate-pulse,
+  .referral-system .animate-spin,
+  .referral-system .animate-ping {
+    animation: none !important;
+  }
+}
+
+/* Focus states for accessibility */
+.referral-system button:focus,
+.referral-system input:focus {
+  outline: 2px solid #00ffff;
+  outline-offset: 2px;
+}
+
+/* Safe area adjustments for mobile devices with notches */
+@supports (padding: max(0px)) {
+  .referral-system {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
   }
 } 

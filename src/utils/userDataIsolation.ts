@@ -3,24 +3,24 @@
 
 export interface UserDataKeys {
   // Core game data
-  divineMiningGame: string;
-  divineMiningGame_backup: string;
-  divineMiningPoints: string;
-  divineMiningTotalEarned: string;
-  divineMiningSession: string;
-  divineMiningTutorial: string;
-  divineMiningAchievements: string;
-  divineMiningUpgrades: string;
-  divineMiningHighScore: string;
+  tonersGame: string;
+  tonersGame_backup: string;
+  tonersPoints: string;
+  tonersTotalEarned: string;
+  tonersSession: string;
+  tonersTutorial: string;
+  tonersAchievements: string;
+  tonersUpgrades: string;
+  tonersHighScore: string;
   
   // Additional user-specific data
-  divineMiningPrestigeMultiplier: string;
-  divineMiningReferralData: string;
-  divineMiningCompletedTasks: string;
-  divineMiningStreak: string;
+  tonersPrestigeMultiplier: string;
+  tonersReferralData: string;
+  tonersCompletedTasks: string;
+  tonersStreak: string;
   spiritualEssencePoints: string;
-  divineMiningGems: string;
-  divineMiningBoosts: string;
+  tonersGems: string;
+  tonersBoosts: string;
   
   // Mining section data
   mining_state: string;
@@ -37,24 +37,24 @@ export const getUserSpecificKeys = (telegramId: string): UserDataKeys => {
   
   return {
     // Core game data
-    divineMiningGame: `divineMiningGame_${telegramId}`,
-    divineMiningGame_backup: `divineMiningGame_backup_${telegramId}`,
-    divineMiningPoints: `divineMiningPoints_${telegramId}`,
-    divineMiningTotalEarned: `divineMiningTotalEarned_${telegramId}`,
-    divineMiningSession: `divineMiningSession_${telegramId}`,
-    divineMiningTutorial: `divineMiningTutorial_${telegramId}`,
-    divineMiningAchievements: `divineMiningAchievements_${telegramId}`,
-    divineMiningUpgrades: `divineMiningUpgrades_${telegramId}`,
-    divineMiningHighScore: `divineMiningHighScore_${telegramId}`,
+    tonersGame: `tonersGame_${telegramId}`,
+    tonersGame_backup: `tonersGame_backup_${telegramId}`,
+    tonersPoints: `tonersPoints_${telegramId}`,
+    tonersTotalEarned: `tonersTotalEarned_${telegramId}`,
+    tonersSession: `tonersSession_${telegramId}`,
+    tonersTutorial: `tonersTutorial_${telegramId}`,
+    tonersAchievements: `tonersAchievements_${telegramId}`,
+    tonersUpgrades: `tonersUpgrades_${telegramId}`,
+    tonersHighScore: `tonersHighScore_${telegramId}`,
     
     // Additional user-specific data
-    divineMiningPrestigeMultiplier: `divineMiningPrestigeMultiplier_${telegramId}`,
-    divineMiningReferralData: `divineMiningReferralData_${telegramId}`,
-    divineMiningCompletedTasks: `divineMiningCompletedTasks_${telegramId}`,
-    divineMiningStreak: `divineMiningStreak_${telegramId}`,
+    tonersPrestigeMultiplier: `tonersPrestigeMultiplier_${telegramId}`,
+    tonersReferralData: `tonersReferralData_${telegramId}`,
+    tonersCompletedTasks: `tonersCompletedTasks_${telegramId}`,
+    tonersStreak: `tonersStreak_${telegramId}`,
     spiritualEssencePoints: `spiritualEssencePoints_${telegramId}`,
-    divineMiningGems: `divineMiningGems_${telegramId}`,
-    divineMiningBoosts: `divineMiningBoosts_${telegramId}`,
+    tonersGems: `tonersGems_${telegramId}`,
+    tonersBoosts: `tonersBoosts_${telegramId}`,
     
     // Mining section data
     mining_state: `mining_state_${telegramId}`,
@@ -67,10 +67,10 @@ export const getUserSpecificKeys = (telegramId: string): UserDataKeys => {
 // Check if a key is user-specific
 export const isUserSpecificKey = (key: string): boolean => {
   const userSpecificPatterns = [
-    /^divineMining.*_\d+$/,
+    /^toners.*_\d+$/,
     /^spiritualEssencePoints_\d+$/,
-    /^divineMiningGems_\d+$/,
-    /^divineMiningBoosts_\d+$/,
+    /^tonersGems_\d+$/,
+    /^tonersBoosts_\d+$/,
     /^mining_state_\d+$/,
     /^frog_miner_data_\d+$/,
   ];
@@ -116,9 +116,9 @@ export const validateUserDataIsolation = (telegramId: string): { isValid: boolea
     const allKeys = Object.keys(localStorage);
     const userKeys = getAllUserKeys(telegramId);
     
-    // Check for non-user-specific divine mining keys
+    // Check for non-user-specific toners keys
     const nonUserSpecificKeys = allKeys.filter(key => 
-      key.startsWith('divineMining') && 
+      key.startsWith('toners') && 
       !isUserSpecificKey(key) &&
       localStorage.getItem(key)
     );
@@ -168,16 +168,16 @@ export const migrateToUserSpecificKeys = (telegramId: string): { success: boolea
     console.log(`🔄 Migrating data to user-specific keys for user: ${telegramId}`);
     
     const migrationMap = {
-      'divineMiningGame': `divineMiningGame_${telegramId}`,
-      'divineMiningGame_backup': `divineMiningGame_backup_${telegramId}`,
-      'divineMiningPoints': `divineMiningPoints_${telegramId}`,
-      'divineMiningTotalEarned': `divineMiningTotalEarned_${telegramId}`,
-      'divineMiningSession': `divineMiningSession_${telegramId}`,
-      'divineMiningTutorial': `divineMiningTutorial_${telegramId}`,
-      'divineMiningAchievements': `divineMiningAchievements_${telegramId}`,
-      'divineMiningUpgrades': `divineMiningUpgrades_${telegramId}`,
-      'divineMiningHighScore': `divineMiningHighScore_${telegramId}`,
-      'divineMiningPrestigeMultiplier': `divineMiningPrestigeMultiplier_${telegramId}`,
+      'tonersGame': `tonersGame_${telegramId}`,
+      'tonersGame_backup': `tonersGame_backup_${telegramId}`,
+      'tonersPoints': `tonersPoints_${telegramId}`,
+      'tonersTotalEarned': `tonersTotalEarned_${telegramId}`,
+      'tonersSession': `tonersSession_${telegramId}`,
+      'tonersTutorial': `tonersTutorial_${telegramId}`,
+      'tonersAchievements': `tonersAchievements_${telegramId}`,
+      'tonersUpgrades': `tonersUpgrades_${telegramId}`,
+      'tonersHighScore': `tonersHighScore_${telegramId}`,
+      'tonersPrestigeMultiplier': `tonersPrestigeMultiplier_${telegramId}`,
     };
     
     Object.entries(migrationMap).forEach(([oldKey, newKey]) => {
@@ -244,15 +244,15 @@ export const checkForDataLeakage = (currentTelegramId: string): { hasLeakage: bo
       issues.push(`Other user keys: ${otherUserKeys.slice(0, 5).join(', ')}${otherUserKeys.length > 5 ? '...' : ''}`);
     }
     
-    // Check for non-user-specific divine mining data
+    // Check for non-user-specific toners data
     const nonUserSpecificData = allKeys.filter(key => 
-      key.startsWith('divineMining') && 
+      key.startsWith('toners') && 
       !isUserSpecificKey(key) &&
       localStorage.getItem(key)
     );
     
     if (nonUserSpecificData.length > 0) {
-      issues.push(`Found non-user-specific divine mining data: ${nonUserSpecificData.join(', ')}`);
+      issues.push(`Found non-user-specific toners data: ${nonUserSpecificData.join(', ')}`);
     }
     
     return {

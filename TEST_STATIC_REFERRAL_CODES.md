@@ -88,7 +88,7 @@ const generateDeterministicHash = (userId) => {
 ## 🛠 **Manual Testing Steps**
 
 1. **Open the app** and go to Referrals tab
-2. **Note your referral code** (e.g., `DIVINE123456ABCD`)
+2. **Note your referral code** (e.g., `TONERS123456ABCD`)
 3. **Close and reopen** the app
 4. **Check referral code again** - should be identical
 5. **Share the link** with someone

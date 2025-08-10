@@ -23,7 +23,7 @@ export const testGemSynchronization = (userId?: string): GemSyncTestResult => {
   const issues: string[] = [];
   
   // Test 1: Check localStorage gem value
-  const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
+  const userGemsKey = getUserSpecificKey('tonersGems', userId);
   const localStorageValue = localStorage.getItem(userGemsKey);
   const localStorageGems = localStorageValue ? parseInt(localStorageValue, 10) : 0;
   
@@ -63,7 +63,7 @@ export const testGemSynchronization = (userId?: string): GemSyncTestResult => {
 
 // Test gem addition across all components
 export const testGemAddition = (userId?: string, amountToAdd: number = 10): void => {
-  const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
+  const userGemsKey = getUserSpecificKey('tonersGems', userId);
   
   // Get current gems
   const currentGems = parseInt(localStorage.getItem(userGemsKey) || '0', 10);
@@ -82,7 +82,7 @@ export const testGemAddition = (userId?: string, amountToAdd: number = 10): void
 
 // Test gem synchronization after tab switch
 export const testTabSwitchSync = (userId?: string): void => {
-  const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
+  const userGemsKey = getUserSpecificKey('tonersGems', userId);
   
   // Simulate external gem change (like from another tab)
   const currentGems = parseInt(localStorage.getItem(userGemsKey) || '0', 10);
@@ -103,7 +103,7 @@ export const testTabSwitchSync = (userId?: string): void => {
 
 // Debug function to log all gem-related localStorage keys
 export const debugGemStorage = (userId?: string): void => {
-  const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
+  const userGemsKey = getUserSpecificKey('tonersGems', userId);
   
   console.log('🐛 Debug: Gem storage analysis');
   console.log('User ID:', userId);
@@ -122,7 +122,7 @@ export const debugGemStorage = (userId?: string): void => {
 
 // Function to reset gems for testing
 export const resetGemsForTesting = (userId?: string, amount: number = 10): void => {
-  const userGemsKey = getUserSpecificKey('divineMiningGems', userId);
+  const userGemsKey = getUserSpecificKey('tonersGems', userId);
   
   localStorage.setItem(userGemsKey, amount.toString());
   

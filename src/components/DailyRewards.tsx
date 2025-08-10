@@ -149,7 +149,7 @@ const calculateEarningRate = (balance: number, roi: number): number => {
   return (balance * roi) / 100;
 };
 
-// ENHANCED: Fixed localStorage keys to prevent conflicts with DivineMiningGame
+  // ENHANCED: Fixed localStorage keys to prevent conflicts with TonersGame
 // Legacy localStorage keys (for backward compatibility)
 const STAKES_STORAGE_KEY = 'daily_rewards_stakes';
 // const USER_DATA_STORAGE_KEY = 'daily_rewards_user_data';
@@ -166,6 +166,109 @@ const getUserDataStorageKey = (userId?: string) => `daily_rewards_user_data_${us
 const getWithdrawalHistoryStorageKey = (userId?: string) => `daily_rewards_withdrawals_${userId || 'anonymous'}`;
 const getMiningSynergyStorageKey = (userId?: string) => `daily_rewards_synergy_${userId || 'anonymous'}`;
 const getStakingBonusesStorageKey = (userId?: string) => `daily_rewards_staking_bonuses_${userId || 'anonymous'}`;
+
+// Session management functions
+const getSessionStorageKey = (userId?: string) => `daily_rewards_session_${userId || 'anonymous'}`;
+
+interface SessionData {
+  sessionId: string;
+  userId: string;
+  balance: number;
+  totalEarnings: number;
+  stakes: UserStake[];
+  miningSynergy: MiningStakingSynergy;
+  stakingBonuses: any;
+  withdrawalHistory: Array<{
+    id: number;
+    amount: number;
+    wallet_address: string;
+    status: 'pending' | 'completed' | 'rejected';
+    created_at: string;
+  }>;
+  lastActivity: number;
+  createdAt: number;
+}
+
+const createSession = (userId: string): SessionData => {
+  const sessionId = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return {
+    sessionId,
+    userId,
+    balance: 0,
+    totalEarnings: 0,
+    stakes: [],
+    miningSynergy: {
+      totalMiningPoints: 0,
+      stakingBonusMultiplier: 1,
+      miningLevelBonus: 0,
+      activeStakesCount: 0,
+      totalStakedAmount: 0,
+      synergyLevel: 0,
+      nextSynergyMilestone: 100,
+      synergyRewards: {
+        miningBoost: 0,
+        stakingBoost: 0,
+        divinePointsBonus: 0
+      }
+    },
+    stakingBonuses: {},
+    withdrawalHistory: [],
+    lastActivity: Date.now(),
+    createdAt: Date.now()
+  };
+};
+
+const saveSession = (sessionData: SessionData) => {
+  try {
+    const key = getSessionStorageKey(sessionData.userId);
+    localStorage.setItem(key, JSON.stringify(sessionData));
+    console.log('💾 Session saved:', sessionData.sessionId);
+  } catch (error) {
+    console.error('Error saving session:', error);
+  }
+};
+
+const loadSession = (userId: string): SessionData | null => {
+  try {
+    const key = getSessionStorageKey(userId);
+    const sessionData = localStorage.getItem(key);
+    if (sessionData) {
+      const parsed = JSON.parse(sessionData) as SessionData;
+      
+      // Check if session is still valid (24 hours)
+      const now = Date.now();
+      const sessionAge = now - parsed.createdAt;
+      const timeSinceLastActivity = now - parsed.lastActivity;
+      const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (sessionAge > SESSION_DURATION || timeSinceLastActivity > SESSION_DURATION) {
+        console.log('⏰ Session expired, creating new one');
+        localStorage.removeItem(key);
+        return null;
+      }
+      
+      console.log('📂 Session loaded:', parsed.sessionId);
+      return parsed;
+    }
+  } catch (error) {
+    console.error('Error loading session:', error);
+  }
+  return null;
+};
+
+const updateSessionActivity = (userId: string) => {
+  try {
+    const key = getSessionStorageKey(userId);
+    const sessionData = localStorage.getItem(key);
+    if (sessionData) {
+      const parsed = JSON.parse(sessionData) as SessionData;
+      parsed.lastActivity = Date.now();
+      localStorage.setItem(key, JSON.stringify(parsed));
+    }
+  } catch (error) {
+    console.error('Error updating session activity:', error);
+  }
+};
 
 
 
@@ -437,7 +540,7 @@ const DailyRewards: React.FC = () => {
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [availableToClaim, setAvailableToClaim] = useState(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'tiers' | 'stakes' | 'synergy'>('overview');
-  const [userBalance, setUserBalance] = useState(0);
+  const [userBalance, setUserBalance] = useState<number>(0);
   const [showDetailedEarnings, setShowDetailedEarnings] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = useState(0);
@@ -450,6 +553,14 @@ const DailyRewards: React.FC = () => {
     status: 'pending' | 'completed' | 'rejected';
     created_at: string;
   }>>([]);
+  
+  // Add rate limiting for staking
+  const [lastStakeTime, setLastStakeTime] = useState(0);
+  const STAKE_COOLDOWN = 2000; // 2 seconds between stakes
+  
+  // Session management
+  const [sessionId, setSessionId] = useState<string>('');
+  const [isSessionActive, setIsSessionActive] = useState(false);
   // New mining integration state
   const [miningSynergy, setMiningSynergy] = useState<MiningStakingSynergy>({
     totalMiningPoints: 0,
@@ -507,6 +618,75 @@ const DailyRewards: React.FC = () => {
       // Keep the default state if there's an error
     }
   }, []);
+
+  // Initialize session when user changes
+  useEffect(() => {
+    if (user?.id) {
+      initializeSession();
+    }
+  }, [user?.id]);
+
+  const initializeSession = async () => {
+    if (!user?.id) return;
+    
+    const userId = String(user.id);
+    console.log('🔄 Initializing session for user:', userId);
+    
+    // Try to load existing session
+    const existingSession = loadSession(userId);
+    
+    if (existingSession) {
+      // Restore from session
+      console.log('📂 Restoring from session:', existingSession.sessionId);
+      setSessionId(existingSession.sessionId);
+      setIsSessionActive(true);
+      
+      // Restore all data from session
+      setUserBalance(safeNumber(existingSession.balance));
+      setTotalEarnings(safeNumber(existingSession.totalEarnings));
+      setUserStakes(existingSession.stakes);
+      setMiningSynergy(existingSession.miningSynergy);
+      setWithdrawalHistory(existingSession.withdrawalHistory);
+      
+      // Update session activity
+      updateSessionActivity(userId);
+      
+      console.log('✅ Session restored successfully');
+    } else {
+      // Create new session and load from database
+      console.log('🆕 Creating new session');
+      const newSession = createSession(userId);
+      setSessionId(newSession.sessionId);
+      setIsSessionActive(true);
+      
+      // Load data from database
+      await loadUserData();
+      loadUserStakes();
+      loadWithdrawalHistory();
+      
+      console.log('✅ New session created');
+    }
+  };
+
+  const saveCurrentSession = () => {
+    if (!user?.id || !isSessionActive) return;
+    
+    const userId = String(user.id);
+    const sessionData: SessionData = {
+      sessionId,
+      userId,
+      balance: safeNumber(userBalance),
+      totalEarnings: safeNumber(totalEarnings),
+      stakes: userStakes,
+      miningSynergy,
+      stakingBonuses: getStakingBonuses(),
+      withdrawalHistory,
+      lastActivity: Date.now(),
+      createdAt: Date.now()
+    };
+    
+    saveSession(sessionData);
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -605,16 +785,16 @@ const DailyRewards: React.FC = () => {
           .single();
 
         if (!error && data) {
-          const newBalance = data.balance || 0;
+          const newBalance = safeNumber(data.balance);
           const oldBalance = userBalance;
           
           setUserBalance(newBalance);
-          setTotalEarnings(data.total_earned || 0);
+          setTotalEarnings(safeNumber(data.total_earned));
           
           // Sync local storage with database
           const userData = getUserData(user?.telegram_id ? String(user.telegram_id) : undefined);
           userData.balance = newBalance;
-          userData.totalEarnings = data.total_earned || 0;
+          userData.totalEarnings = safeNumber(data.total_earned);
           saveUserData(userData, user?.telegram_id ? String(user.telegram_id) : undefined);
           
           // Check for balance milestones
@@ -652,14 +832,14 @@ const DailyRewards: React.FC = () => {
       
       // Fallback to local storage
       const userData = getUserData(user?.telegram_id ? String(user.telegram_id) : undefined);
-      setUserBalance(userData.balance);
-      setTotalEarnings(userData.totalEarnings);
+      setUserBalance(safeNumber(userData.balance));
+      setTotalEarnings(safeNumber(userData.totalEarnings));
     } catch (error) {
       console.error('Error loading user data:', error);
       // Fallback to local storage
       const userData = getUserData(user?.telegram_id ? String(user.telegram_id) : undefined);
-      setUserBalance(userData.balance);
-      setTotalEarnings(userData.totalEarnings);
+      setUserBalance(safeNumber(userData.balance));
+      setTotalEarnings(safeNumber(userData.totalEarnings));
     }
   };
 
@@ -702,36 +882,147 @@ const DailyRewards: React.FC = () => {
     if (!user || !selectedTier || stakeAmount < selectedTier.minAmount) return;
     
     // Check if user has enough balance
-    if (userBalance < stakeAmount) {
+    const safeBalance = safeNumber(userBalance);
+    if (safeBalance < stakeAmount) {
       alert('Insufficient balance!');
+      return;
+    }
+
+    // Additional validation: Check if user is trying to stake more than they have
+    if (stakeAmount > safeBalance) {
+      alert('Insufficient balance!');
+      return;
+    }
+
+    // Prevent multiple simultaneous staking attempts
+    if (isLoading) {
+      console.log('Staking already in progress...');
+      return;
+    }
+
+    // Rate limiting: Prevent rapid-fire staking
+    const now = Date.now();
+    if (now - lastStakeTime < STAKE_COOLDOWN) {
+      const remainingTime = Math.ceil((STAKE_COOLDOWN - (now - lastStakeTime)) / 1000);
+      alert(`Please wait ${remainingTime} seconds before staking again.`);
       return;
     }
 
     setIsLoading(true);
     try {
-      // Create stake in database first
-      const { data: newStakeData, error: createError } = await supabase
-        .from('stakes')
-        .insert([{
-          user_id: user.id,
-          amount: stakeAmount,
-          daily_rate: selectedTier.dailyRate,
-          start_date: new Date().toISOString(),
-          last_payout: new Date().toISOString(),
-          is_active: true,
-          speed_boost_active: false,
-          cycle_progress: 0
-        }])
-        .select()
+      // First, get the current database balance to prevent cheating
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('id', user.id)
         .single();
 
-      if (createError) {
-        throw createError;
+      if (fetchError) {
+        throw new Error('Failed to fetch current balance');
+      }
+
+      const currentDbBalance = safeNumber(currentUser.balance);
+      
+      // Validate against actual database balance
+      if (currentDbBalance < stakeAmount) {
+        throw new Error(`Insufficient balance! Available: ${currentDbBalance} TON, Required: ${stakeAmount} TON`);
+      }
+
+      // Try database function first, fallback to direct approach if function doesn't exist
+      let stakeId = null;
+
+      try {
+        const { data: functionResult, error: functionError } = await supabase.rpc('create_stake', {
+          p_user_id: user.id,
+          p_amount: stakeAmount,
+          p_daily_rate: selectedTier.dailyRate,
+          p_tier_name: selectedTier.name
+        });
+
+        if (functionError) {
+          console.warn('Database function not available, using direct approach:', functionError);
+          throw functionError; // This will trigger the fallback
+        }
+
+        stakeId = functionResult;
+        console.log('✅ Stake created successfully via database function');
+        
+        // Verify balance was updated by the function
+        const { data: verifyUser, error: verifyError } = await supabase
+          .from('users')
+          .select('balance')
+          .eq('id', user.id)
+          .single();
+
+        if (!verifyError && verifyUser) {
+          const actualBalance = verifyUser.balance || 0;
+          const expectedBalance = currentDbBalance - stakeAmount;
+          
+          if (Math.abs(actualBalance - expectedBalance) > 0.001) {
+            console.log(`Correcting balance from function: ${actualBalance} → ${expectedBalance}`);
+            await supabase
+              .from('users')
+              .update({ 
+                balance: expectedBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', user.id);
+          }
+        }
+      } catch (functionError) {
+        console.log('Using fallback staking approach...');
+        
+        // Simple fallback: Create stake first, then update balance
+        console.log('Using simple fallback approach...');
+        
+        // Step 1: Create the stake first
+        const { data: newStakeData, error: insertError } = await supabase
+          .from('stakes')
+          .insert([{
+            user_id: user.id,
+            amount: stakeAmount,
+            daily_rate: selectedTier.dailyRate,
+            start_date: new Date().toISOString(),
+            last_payout: new Date().toISOString(),
+            is_active: true,
+            speed_boost_active: false,
+            cycle_progress: 0
+          }])
+          .select()
+          .single();
+
+        if (insertError) {
+          throw new Error(`Failed to create stake: ${insertError.message}`);
+        }
+
+        stakeId = newStakeData.id;
+        console.log('✅ Stake created successfully');
+
+        // Step 2: Update balance after stake creation
+        const { data: updateResult, error: balanceError } = await supabase
+          .from('users')
+          .update({ 
+            balance: currentDbBalance - stakeAmount,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+          .select('balance')
+          .single();
+
+        if (balanceError) {
+          console.warn('Could not update balance immediately, will sync later:', balanceError);
+        } else {
+          console.log(`✅ Balance updated successfully: ${currentDbBalance} → ${updateResult.balance}`);
+        }
+      }
+
+      if (!stakeId) {
+        throw new Error('Failed to create stake - no stake ID returned');
       }
 
       // Create local stake object with database ID
       const newStake: UserStake = {
-        id: newStakeData.id, // Use database-generated ID
+        id: stakeId, // Use database-generated ID
         user_id: String(user.id),
         amount: stakeAmount,
         daily_rate: selectedTier.dailyRate,
@@ -753,31 +1044,19 @@ const DailyRewards: React.FC = () => {
       allStakes.push(newStake);
       saveStakesToStorage(allStakes, user?.telegram_id ? String(user.telegram_id) : undefined);
 
-      // Update database balance
-      // Supabase does not support .raw, so fetch current balance, subtract, and update
-      let newDbBalance = null;
-      try {
-        const { data: userDb, error: fetchDbError } = await supabase
-          .from('users')
-          .select('balance')
-          .eq('id', user.id)
-          .single();
-        if (fetchDbError) throw fetchDbError;
-        newDbBalance = (userDb.balance || 0) - stakeAmount;
-        if (newDbBalance < 0) newDbBalance = 0;
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ 
-            balance: newDbBalance,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-        if (updateError) {
-          console.error('Error updating database balance:', updateError);
-        }
-      } catch (err) {
-        console.error('Error fetching/updating user balance:', err);
-      }
+                      // Update local state and storage immediately
+                const newBalance = Math.max(0, safeNumber(userBalance) - stakeAmount);
+      console.log(`💰 Balance Update: ${userBalance} → ${newBalance} (staked: ${stakeAmount})`);
+      console.log(`📊 Local state update: userBalance = ${newBalance}`);
+      setUserBalance(newBalance);
+      
+      // Update local storage
+      const userData = getUserData(user?.telegram_id ? String(user.telegram_id) : undefined);
+      userData.balance = newBalance;
+      saveUserData(userData, user?.telegram_id ? String(user.telegram_id) : undefined);
+
+      // Set rate limiting timestamp
+      setLastStakeTime(Date.now());
 
       // Refresh stakes
       loadUserStakes();
@@ -785,8 +1064,40 @@ const DailyRewards: React.FC = () => {
       setStakeAmount(1);
       setSelectedTier(null);
 
-      // Always reload user data from backend after staking
-      await loadUserData();
+      // Final verification: Ensure balance is correct (with small delay for database sync)
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for database to sync
+      
+      const { data: finalUser, error: finalError } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('id', user.id)
+        .single();
+
+      if (!finalError && finalUser) {
+        const finalBalance = finalUser.balance || 0;
+        const expectedBalance = currentDbBalance - stakeAmount;
+        
+        if (Math.abs(finalBalance - expectedBalance) > 0.001) {
+          console.warn(`Final balance correction needed: ${finalBalance} → ${expectedBalance}`);
+          await supabase
+            .from('users')
+            .update({ 
+              balance: expectedBalance,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+          console.log(`✅ Balance corrected to: ${expectedBalance} TON`);
+        } else {
+          console.log(`✅ Final balance verification passed: ${finalBalance} TON`);
+        }
+      }
+
+      // Don't reload user data - our local state is already correct
+      // The balance has been updated in the database and local state
+      console.log('✅ Staking complete - balance updated successfully');
+      
+      // Save session after successful staking
+      saveCurrentSession();
       
       showSystemNotification(
         'Stake Created Successfully', 
@@ -801,11 +1112,22 @@ const DailyRewards: React.FC = () => {
           description: 'Created your first staking position!'
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating stake:', error);
+      
+      // Provide more helpful error messages
+      let errorMessage = 'There was an error creating your stake. Please try again.';
+      if (error.message?.includes('Unable to update balance after multiple attempts')) {
+        errorMessage = 'Network is busy. Please wait a moment and try again.';
+      } else if (error.message?.includes('Insufficient balance')) {
+        errorMessage = error.message; // Keep the detailed balance message
+      } else if (error.message?.includes('Balance changed during staking')) {
+        errorMessage = 'Please try staking again. The system is processing your request.';
+      }
+      
       showSystemNotification(
         'Stake Creation Failed', 
-        'There was an error creating your stake. Please try again.', 
+        errorMessage, 
         'error'
       );
     } finally {
@@ -874,6 +1196,9 @@ const DailyRewards: React.FC = () => {
       setAvailableToClaim(0);
       setShowClaimModal(false);
       
+      // Save session after successful claim
+      saveCurrentSession();
+      
       showRewardNotification(
         'Rewards Claimed Successfully', 
         netReward, 
@@ -919,7 +1244,8 @@ const DailyRewards: React.FC = () => {
   };
 
   const handleWithdrawalRequest = async () => {
-    if (!walletAddress.trim() || withdrawalAmount <= 0 || withdrawalAmount > userBalance) {
+    const safeBalance = safeNumber(userBalance);
+    if (!walletAddress.trim() || withdrawalAmount <= 0 || withdrawalAmount > safeBalance) {
       showSystemNotification(
         'Invalid Withdrawal Request', 
         'Please enter a valid wallet address and withdrawal amount.', 
@@ -1042,10 +1368,29 @@ const DailyRewards: React.FC = () => {
   }, [user?.id]);
 
   const formatNumber = (num: number) => {
+    // Prevent NaN and invalid numbers
+    if (isNaN(num) || !isFinite(num) || num === null || num === undefined) {
+      return '0.0000';
+    }
+    
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 4,
       maximumFractionDigits: 4
     }).format(num);
+  };
+
+  const safeNumber = (value: any): number => {
+    // Convert any value to a safe number
+    if (value === null || value === undefined || value === '') {
+      return 0;
+    }
+    
+    const num = Number(value);
+    if (isNaN(num) || !isFinite(num)) {
+      return 0;
+    }
+    
+    return num;
   };
 
   const formatDate = (dateString: string) => {
@@ -1594,6 +1939,13 @@ const DailyRewards: React.FC = () => {
       }
 
       // Validate balance change
+      console.log('🔍 Balance validation:', {
+        serverBalance: currentUser.balance,
+        clientBalance: data.balance,
+        change: Math.abs(data.balance - currentUser.balance),
+        isValid: validateBalanceChange(currentUser.balance, data.balance)
+      });
+      
       if (!validateBalanceChange(currentUser.balance, data.balance)) {
         console.error('Suspicious balance change detected');
         logSecurityEvent({
@@ -1868,110 +2220,137 @@ const DailyRewards: React.FC = () => {
         return;
       }
 
-
-
       setDepositStatus('pending');
-      const amountInNano = toNano(amount.toString());
-      
-      // Generate unique ID
-      const depositId = await generateUniqueId();
-      
-      // Record pending deposit
-      const { error: pendingError } = await supabase
-        .from('deposits')
-        .insert([{
-          id: depositId,
-          user_id: user.id,
-          amount: amount,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        }]);
 
-      if (pendingError) throw pendingError;
-
-      // Create transaction
-      const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 60 * 20, // 20 minutes
-        messages: [
-          {
-            address: DEPOSIT_ADDRESS, // Use string address
-            amount: amountInNano.toString(),
-          },
-        ],
-      };
-
-      const result = await tonConnectUI.sendTransaction(transaction);
-
-      if (result) {
-        // Update deposit status
-        const { error: updateError } = await supabase
+      try {
+        // Generate unique ID
+        const depositId = await generateUniqueId();
+        
+        // Record pending deposit
+        const { error: pendingError } = await supabase
           .from('deposits')
-          .update({ 
-            status: 'completed',
-            transaction_hash: result.boc
-          })
-          .eq('id', depositId);
+          .insert([{
+            id: depositId,
+            user_id: user.id,
+            amount: amount,
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }]);
 
-        if (updateError) throw updateError;
+        if (pendingError) throw pendingError;
 
-        // Process deposit - try database function first, fallback to direct update
-        try {
-          const { error: balanceError } = await supabase.rpc('process_deposit_v2', {
-            p_user_id: user.id,
-            p_amount: amount,
-            p_deposit_id: depositId
-          });
-
-          if (balanceError) throw balanceError;
-        } catch (functionError) {
-          console.warn('Database function not available, using direct update:', functionError);
-          
-          // Fallback: Simple balance update
-          const { data: currentUser, error: fetchError } = await supabase
-            .from('users')
-            .select('balance, total_deposit')
-            .eq('id', user.id)
-            .single();
-
-          if (fetchError) throw fetchError;
-
-          const { error: updateUserError } = await supabase
-            .from('users')
-            .update({ 
-              balance: (currentUser.balance || 0) + amount,
-              total_deposit: (currentUser.total_deposit || 0) + amount,
-              last_deposit_time: new Date().toISOString(),
-              last_deposit_date: new Date().toISOString().split('T')[0]
-            })
-            .eq('id', user.id);
-
-          if (updateUserError) throw updateUserError;
-        }
-
-        // Update UI state
-        setDepositStatus('success');
-        showSystemNotification(
-          'Deposit Successful', 
-          `Successfully deposited ${amount} TON to your account`, 
-          'success'
-        );
-        
-        // Refresh user data
-        await updateUserData({ id: user.id }); // Pass object with id property
-        setShowDepositModal(false);
-
-        // After successful deposit, initialize or update earnings state
-        const totalBalance = (user?.balance || 0) + amount;
-        const newRate = calculateEarningRate(totalBalance, currentROI);
-        const newState = {
-          lastUpdate: Date.now(),
-          currentEarnings: earningState.currentEarnings,
-          baseEarningRate: newRate,
-          isActive: true
+        // Create transaction
+        const amountInNano = toNano(amount.toString());
+        const transaction = {
+          validUntil: Math.floor(Date.now() / 1000) + 60 * 20, // 20 minutes
+          messages: [
+            {
+              address: DEPOSIT_ADDRESS,
+              amount: amountInNano.toString(),
+            },
+          ],
         };
+
+        // Send transaction and wait for user interaction
+        const result = await tonConnectUI.sendTransaction(transaction);
+
+        // Only proceed if we have a transaction result
+        if (result) {
+          // Update deposit status
+          const { error: updateError } = await supabase
+            .from('deposits')
+            .update({ 
+              status: 'completed',
+              transaction_hash: result.boc
+            })
+            .eq('id', depositId);
+
+          if (updateError) throw updateError;
+
+          // Process deposit - try database function first, fallback to direct update
+          try {
+            const { error: balanceError } = await supabase.rpc('process_deposit_v2', {
+              p_user_id: user.id,
+              p_amount: amount,
+              p_deposit_id: depositId
+            });
+
+            if (balanceError) throw balanceError;
+          } catch (functionError) {
+            console.warn('Database function not available, using direct update:', functionError);
+            
+            // Fallback: Simple balance update
+            const { data: currentUser, error: fetchError } = await supabase
+              .from('users')
+              .select('balance, total_deposit')
+              .eq('id', user.id)
+              .single();
+
+            if (fetchError) throw fetchError;
+
+            const { error: updateUserError } = await supabase
+              .from('users')
+              .update({ 
+                balance: (currentUser.balance || 0) + amount,
+                total_deposit: (currentUser.total_deposit || 0) + amount,
+                last_deposit_time: new Date().toISOString(),
+                last_deposit_date: new Date().toISOString().split('T')[0]
+              })
+              .eq('id', user.id);
+
+            if (updateUserError) throw updateUserError;
+          }
+
+          // Update UI state
+          setDepositStatus('success');
+          
+          // Save session after successful deposit
+          saveCurrentSession();
+          
+          showSystemNotification(
+            'Deposit Successful', 
+            `Successfully deposited ${amount} TON to your account`, 
+            'success'
+          );
+          
+          // Refresh user data
+          await updateUserData({ id: user.id });
+          setShowDepositModal(false);
+
+          // After successful deposit, initialize or update earnings state
+          const totalBalance = (user?.balance || 0) + amount;
+          const newRate = calculateEarningRate(totalBalance, currentROI);
+          const newState = {
+            lastUpdate: Date.now(),
+            currentEarnings: earningState.currentEarnings,
+            baseEarningRate: newRate,
+            isActive: true
+          };
+          
+          setEarningState(newState);
+          saveEarningState(newState);
+        } else {
+          // User might have cancelled or transaction failed
+          // Clean up the pending deposit
+          await supabase
+            .from('deposits')
+            .delete()
+            .eq('id', depositId);
+            
+          setDepositStatus('idle');
+        }
+      } catch (txError: any) {
+        console.error('Transaction error:', txError);
+        setDepositStatus('idle');
         
-        setEarningState(newState);
-        saveEarningState(newState);
+        // Only show error if it's not a user cancellation
+        if (txError?.message !== 'User rejected the transaction') {
+          showSystemNotification(
+            'Transaction Failed', 
+            'There was an error processing your transaction. Please try again.', 
+            'error'
+          );
+        }
       }
     } catch (error) {
       console.error('Deposit failed:', error);
@@ -1999,6 +2378,20 @@ const DailyRewards: React.FC = () => {
       cleanupStealthSaving();
     };
   }, [user?.id, initializeStealthSaving, cleanupStealthSaving]);
+
+  // Auto-save session every 30 seconds when session is active
+  useEffect(() => {
+    if (!isSessionActive || !user?.id) return;
+
+    const autoSaveInterval = setInterval(() => {
+      saveCurrentSession();
+      console.log('💾 Auto-saved session');
+    }, 30000); // 30 seconds
+
+    return () => {
+      clearInterval(autoSaveInterval);
+    };
+  }, [isSessionActive, user?.id]);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -2126,7 +2519,7 @@ const DailyRewards: React.FC = () => {
     
     syncMiningPoints();
     
-    // Listen for changes from DivineMiningGame
+    // Listen for changes from TonersGame
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === `spiritualEssencePoints_${user?.telegram_id}`) {
         syncMiningPoints();
@@ -2140,7 +2533,7 @@ const DailyRewards: React.FC = () => {
   // REPLACE with direct localStorage update:
   const handleSynergyReward = () => {
     if (user?.telegram_id) {
-      const userGemsKey = `divineMiningGems_${user.telegram_id}`;
+      const userGemsKey = `tonersGems_${user.telegram_id}`;
       const currentGems = parseInt(localStorage.getItem(userGemsKey) || '0', 10);
       const newGems = currentGems + 50;
       localStorage.setItem(userGemsKey, newGems.toString());
@@ -2153,62 +2546,71 @@ const DailyRewards: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen text-white p-1 sm:p-2">
-      <div className="max-w-4xl mx-auto">
-        {/* User-Friendly Header */}
-        <div className="text-center mb-3 sm:mb-4">
-          <div className="mb-2 sm:mb-3">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-mono font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-1">
-              🚀 Divine Mining Staking
+    <div className="min-h-screen text-white p-2 relative overflow-hidden">
+      {/* Enhanced Background */}
+      <div className="absolute"></div>
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-1/4 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto">
+        {/* Modern Header */}
+        <div className="text-center mb-6">
+          <div className="relative">
+            <h1 className="absolute text-2xl md:text-4xl font-mono font-black bg-gradient-to-r from-cyber-blue via-cyan-400 to-purple-400 bg-clip-text text-transparent mb-2 tracking-wider">
+              ⚡ DIVINE STAKING HUB
             </h1>
-            <p className="text-xs sm:text-sm text-gray-300 font-mono">
-              Start earning up to 3% daily TON rewards instantly
-            </p>
+            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-full h-full bg-gradient-to-r from-cyan-400/20 to-purple-400/20 blur-2xl -z-10"></div>
           </div>
+          <p className="text-sm text-gray-400 font-mono mb-4 tracking-wide">
+            Premium TON staking with up to <span className="text-cyan-400 font-bold">3% daily returns</span>
+          </p>
           
-          {/* Quick Start Guide */}
-          {userStakes.length === 0 && userFriendlyAddress && (
-            <div className="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 border border-cyan-500/30 rounded-lg p-2 sm:p-3 max-w-2xl mx-auto">
-              <div className="text-cyan-400 font-mono font-bold mb-1 sm:mb-2 text-xs">🎯 QUICK START GUIDE</div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 text-xs text-gray-300">
-                <div className="flex items-center space-x-1">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-xs">1</div>
-                  <span>Choose your tier</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-xs">2</div>
-                  <span>Set stake amount</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-xs">3</div>
-                  <span>Start earning daily</span>
-                </div>
-              </div>
+          {/* Status Bar */}
+          <div className="flex items-center justify-center space-x-4 mb-6">
+            <div className="flex items-center space-x-2 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/30">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-xs font-mono text-green-400">LIVE</span>
             </div>
-          )}
+            <div className="flex items-center space-x-2 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/30">
+              <span className="text-xs font-mono text-blue-400">{userStakes.length} ACTIVE</span>
+            </div>
+            <div className="flex items-center space-x-2 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/30">
+              <span className="text-xs font-mono text-purple-400">{formatNumber(totalEarnings)} TON EARNED</span>
+            </div>
+          </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex justify-center mb-2 sm:mb-3">
-          <div className="flex bg-gray-800/50 rounded-lg p-1 border border-gray-600/30 w-full max-w-md">
-            {[
-              { id: 'overview', label: 'PROFIT', icon: '📊' },
-              { id: 'tiers', label: 'TIERS', icon: '🏆' },
-              { id: 'stakes', label: 'STAKES', icon: '🔥' },
-              { id: 'synergy', label: 'BOOSTS', icon: '⚡' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-2 py-1.5 rounded-md text-xs font-mono font-bold transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {tab.icon} {tab.label}
-              </button>
-            ))}
+        {/* Enhanced Navigation */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-gradient-to-r from-slate-900/80 to-gray-900/80 backdrop-blur-xl rounded-2xl p-1 border border-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.1)]">
+            <div className="flex space-x-1">
+              {[
+                { id: 'overview', label: 'DASHBOARD', icon: '📊', color: 'from-green-500 to-emerald-500' },
+                { id: 'tiers', label: 'TIERS', icon: '🏆', color: 'from-yellow-500 to-orange-500' },
+                { id: 'stakes', label: 'PORTFOLIO', icon: '🔥', color: 'from-red-500 to-pink-500' },
+                { id: 'synergy', label: 'SYNERGY', icon: '⚡', color: 'from-purple-500 to-indigo-500' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`relative px-4 py-3 rounded-xl text-xs font-mono font-bold transition-all duration-300 transform ${
+                    activeTab === tab.id
+                      ? `bg-gradient-to-r ${tab.color} text-white shadow-lg scale-105`
+                      : 'text-gray-400 hover:text-white hover:bg-white/5 hover:scale-102'
+                  }`}
+                >
+                  <div className="relative z-10 flex items-center space-x-2">
+                    <span className="text-base">{tab.icon}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </div>
+                  {activeTab === tab.id && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-xl"></div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -3685,7 +4087,7 @@ const DailyRewards: React.FC = () => {
 
               <div className="space-y-6">
                 {/* Wallet Connection Status */}
-                <div className="bg-gray-800/30 border border-gray-600/30 rounded-xl p-4">
+                {/* <div className="bg-gray-800/30 border border-gray-600/30 rounded-xl p-4">
                   <div className="text-sm font-mono text-gray-300 mb-3 text-center">🔗 WALLET CONNECTION</div>
                   <div className="space-y-2 text-xs font-mono">
                     <div className="flex justify-between">
@@ -3709,7 +4111,7 @@ const DailyRewards: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Deposit Amount */}
                 <div className="bg-gray-800/30 border border-gray-600/30 rounded-xl p-4">

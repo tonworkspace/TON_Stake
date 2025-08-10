@@ -2,8 +2,9 @@ import { FC, useState, useEffect } from 'react';
 import { 
   HiOutlineSparkles, 
   HiOutlineLightBulb, 
-  HiOutlineCube, 
-  HiOutlineCheckCircle 
+  // HiOutlineCube, 
+  HiOutlineCheckCircle,
+  HiOutlineCog
 } from 'react-icons/hi';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -23,26 +24,26 @@ export const OnboardingScreen: FC = () => {
   const steps: OnboardingStep[] = [
     {
       icon: <HiOutlineSparkles className="w-8 h-8 text-blue-400" />,
-      title: "Welcome to TBC Mining Revolution",
-      description: "The Billion Coin returns stronger than ever. This is the next generation of TBC mining - powered by advanced blockchain technology and decentralized mining networks.",
+      title: "Welcome to TONERS Miner",
+      description: "TONERS represents the future of professional cryptocurrency mining. Experience next-generation mining technology with advanced algorithms and decentralized networks.",
       emoji: "⛏️"
     },
     {
       icon: <HiOutlineLightBulb className="w-8 h-8 text-blue-400" />,
-      title: "Mining the Future",
-      description: "Join the global TBC mining network. Use cutting-edge mining rigs, optimize your hash rate, and earn TBC coins through our innovative tap-to-mine mechanics.",
+      title: "Professional Mining Operations",
+      description: "Join the global TONERS mining network. Utilize professional-grade mining equipment, optimize performance metrics, and earn TONERS through efficient mining operations.",
       emoji: "🚀"
     },
     {
-      icon: <HiOutlineCube className="w-8 h-8 text-blue-400" />,
-      title: "Advanced Mining Features",
-      description: "Tap-to-Mine TBC, Hardware Upgrades, Daily Mining Challenges, Mining Pool Rewards, and Real Value built on TON with NFTs, tokens, staking, and mining rewards.",
-      emoji: "🔧"
+      icon: <HiOutlineCog className="w-8 h-8 text-blue-400" />,
+      title: "Advanced Mining Technology",
+      description: "Access comprehensive mining tools: Hardware upgrades, Performance analytics, Automated systems, Real-time monitoring, and Professional-grade equipment for maximum efficiency.",
+      emoji: "⚙️"
     },
     {
       icon: <HiOutlineCheckCircle className="w-8 h-8 text-blue-400" />,
-      title: "Start Mining Now!",
-      description: "Your mining rig is ready. Join thousands of miners earning TBC coins every day. Start your mining operation and build your crypto wealth.",
+      title: "Start Mining Operations",
+      description: "Your mining station is ready. Join thousands of miners earning TONERS daily. Initialize your mining operation and build your cryptocurrency portfolio.",
       emoji: "💎"
     }
   ];

@@ -585,8 +585,59 @@ export const TaskCenter: React.FC = () => {
     }
   }, [resetMiningTimeTracking, gameState, taskProgress, completedTasks, processingTasks, miningTime]);
 
-  return (
-    <div className="task-center-container flex-1 p-custom space-y-2 overflow-y-auto game-scrollbar">
+     return (
+     <>
+       {/* Enhanced CSS Animations */}
+       <style>{`
+         @keyframes fadeIn {
+           from {
+             opacity: 0;
+           }
+           to {
+             opacity: 1;
+           }
+         }
+         
+         @keyframes scaleIn {
+           from {
+             opacity: 0;
+             transform: scale(0.9);
+           }
+           to {
+             opacity: 1;
+             transform: scale(1);
+           }
+         }
+         
+         @keyframes float {
+           0%, 100% {
+             transform: translateY(0px) translateX(0px);
+           }
+           25% {
+             transform: translateY(-10px) translateX(5px);
+           }
+           50% {
+             transform: translateY(-5px) translateX(-5px);
+           }
+           75% {
+             transform: translateY(-15px) translateX(3px);
+           }
+         }
+         
+         .animate-fadeIn {
+           animation: fadeIn 0.3s ease-out;
+         }
+         
+         .animate-scaleIn {
+           animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+         }
+         
+         .animate-float {
+           animation: float 3s ease-in-out infinite;
+         }
+       `}</style>
+
+       <div className="task-center-container flex-1 p-custom space-y-2 overflow-y-auto game-scrollbar">
       {/* Header */}
       <div className="relative bg-black/40 backdrop-blur-xl border border-cyan-500/30 rounded-xl p-3 shadow-[0_0_30px_rgba(0,255,255,0.1)]">
         <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-cyan-400"></div>
@@ -751,212 +802,271 @@ export const TaskCenter: React.FC = () => {
         })}
       </div>
 
-      {/* Reward Modal */}
-      {showRewardModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="relative bg-black/90 backdrop-blur-2xl rounded-xl p-6 text-center max-w-sm mx-4 border border-cyan-400/30 shadow-[0_0_30px_rgba(0,255,255,0.3)]">
-            <div className="text-4xl mb-4 animate-bounce">🎉</div>
-            
-            <h3 className="text-white font-mono font-bold text-xl mb-4 tracking-wider">TASK COMPLETED!</h3>
-            
-            <div className="bg-cyan-500/20 backdrop-blur-xl rounded-lg p-4 border border-cyan-400/30 mb-6">
-              <p className="text-cyan-200 text-sm font-mono tracking-wider">{rewardMessage}</p>
-            </div>
-            
-            <button
-              onClick={() => setShowRewardModal(false)}
-              className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-mono font-bold py-3 px-6 rounded-lg tracking-wider hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-[0_0_20px_rgba(0,255,255,0.3)]"
-            >
-              AWESOME! ✨
-            </button>
-          </div>
-        </div>
-      )}
+             {/* Enhanced Reward Modal */}
+       {showRewardModal && (
+         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-fadeIn">
+           {/* Enhanced Dark Overlay */}
+           <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-gray-900/95 to-black/90"></div>
+           
+           {/* Modal Content */}
+           <div className="relative bg-gradient-to-br from-gray-900/95 via-black/90 to-gray-900/95 backdrop-blur-2xl rounded-2xl p-8 text-center max-w-sm mx-4 border-2 border-cyan-400/40 shadow-[0_0_50px_rgba(0,255,255,0.4)] animate-scaleIn">
+             {/* Glowing border effect */}
+             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 rounded-2xl blur-sm"></div>
+             
+             {/* Corner decorations */}
+             <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-cyan-400 animate-pulse"></div>
+             <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+             <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+             <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+             
+             <div className="relative z-10">
+               {/* Animated celebration icon */}
+               <div className="text-6xl mb-6 animate-bounce">🎉</div>
+               
+               {/* Animated particles */}
+               {[...Array(8)].map((_, i) => (
+                 <div
+                   key={i}
+                   className="absolute w-2 h-2 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full animate-float opacity-70"
+                   style={{
+                     top: `${20 + Math.random() * 60}%`,
+                     left: `${10 + Math.random() * 80}%`,
+                     animationDelay: `${i * 0.2}s`,
+                     animationDuration: `${2 + Math.random() * 2}s`
+                   }}
+                 />
+               ))}
+               
+               <h3 className="text-white font-mono font-bold text-2xl mb-6 tracking-wider drop-shadow-[0_0_10px_rgba(0,255,255,0.5)]">
+                 TASK COMPLETED!
+               </h3>
+               
+               <div className="bg-gradient-to-r from-cyan-500/30 via-blue-500/20 to-purple-500/30 backdrop-blur-xl rounded-xl p-5 border border-cyan-400/40 mb-8 shadow-inner">
+                 <p className="text-cyan-200 text-lg font-mono tracking-wider drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">
+                   {rewardMessage}
+                 </p>
+               </div>
+               
+               <button
+                 onClick={() => setShowRewardModal(false)}
+                 className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white font-mono font-bold py-4 px-8 rounded-xl tracking-wider hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 transition-all duration-300 shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:shadow-[0_0_40px_rgba(0,255,255,0.6)] transform hover:scale-105 border border-cyan-400/30"
+               >
+                 AWESOME! ✨
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
 
-      {/* Custom Task Modal */}
-      {showTaskModal && currentTaskModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="relative bg-black/90 backdrop-blur-2xl rounded-xl p-6 text-center max-w-md mx-4 border border-cyan-400/30 shadow-[0_0_30px_rgba(0,255,255,0.3)]">
-            {/* Close button */}
-            <button
-              onClick={() => setShowTaskModal(false)}
-              className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl transition-colors duration-300"
-            >
-              ×
-            </button>
-            
-            {/* Corner decorations */}
-            <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-cyan-400"></div>
-            <div className="absolute top-0 right-0 w-3 h-3 border-r-2 border-t-2 border-cyan-400"></div>
-            <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 border-cyan-400"></div>
-            <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-cyan-400"></div>
-            
-            {/* Task Icon */}
-            <div className="text-4xl mb-4">
-              {currentTaskModal.type === 'social' && '🌐'}
-              {currentTaskModal.type === 'wallet' && '💎'}
-              {currentTaskModal.type === 'invite' && '👥'}
-            </div>
-            
-            {/* Task Title */}
-            <h3 className="text-white font-mono font-bold text-lg mb-3 tracking-wider">
-              {currentTaskModal.task.title}
-            </h3>
-            
-            {/* Task Message */}
-            <div className="bg-cyan-500/10 backdrop-blur-xl rounded-lg p-4 border border-cyan-400/20 mb-6">
-              <p className="text-cyan-200 text-sm font-mono tracking-wider whitespace-pre-line">
-                {currentTaskModal.message}
-              </p>
-            </div>
-            
-            {/* Reward Info */}
-            <div className="bg-yellow-500/10 backdrop-blur-xl rounded-lg p-3 border border-yellow-400/20 mb-6">
-              <div className="text-yellow-400 font-mono font-bold text-sm tracking-wider">
-                REWARD: {currentTaskModal.task.reward}
-              </div>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => {
-                  currentTaskModal.onConfirm();
-                  setShowTaskModal(false);
-                }}
-                className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-mono font-bold py-3 px-6 rounded-lg tracking-wider hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-[0_0_20px_rgba(0,255,255,0.3)] flex items-center gap-2"
-              >
-                <span>✅</span>
-                <span>{currentTaskModal.confirmText}</span>
-              </button>
-              
-              {currentTaskModal.cancelText && (
-                <button
-                  onClick={() => {
-                    currentTaskModal.onCancel?.();
-                    setShowTaskModal(false);
-                  }}
-                  className="bg-gradient-to-r from-gray-600 to-gray-500 text-white font-mono font-bold py-3 px-6 rounded-lg tracking-wider hover:from-gray-500 hover:to-gray-400 transition-all duration-300 flex items-center gap-2"
-                >
-                  <span>❌</span>
-                  <span>{currentTaskModal.cancelText}</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+             {/* Enhanced Custom Task Modal */}
+       {showTaskModal && currentTaskModal && (
+         <div className="fixed inset-0 bg-black/96 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-fadeIn">
+           {/* Enhanced Dark Overlay */}
+           <div className="absolute inset-0 bg-gradient-to-br from-black/92 via-gray-900/96 to-black/92"></div>
+           
+           {/* Modal Content */}
+           <div className="relative bg-gradient-to-br from-gray-900/95 via-black/90 to-gray-900/95 backdrop-blur-2xl rounded-2xl p-8 text-center max-w-md mx-4 border-2 border-cyan-400/40 shadow-[0_0_50px_rgba(0,255,255,0.4)] animate-scaleIn">
+             {/* Glowing border effect */}
+             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 rounded-2xl blur-sm"></div>
+             
+             {/* Close button */}
+             <button
+               onClick={() => setShowTaskModal(false)}
+               className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl transition-all duration-300 hover:rotate-90 hover:scale-110 z-20"
+             >
+               ×
+             </button>
+             
+             {/* Corner decorations */}
+             <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-cyan-400 animate-pulse"></div>
+             <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+             <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+             <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+             
+             <div className="relative z-10">
+               {/* Task Icon with animation */}
+               <div className="text-5xl mb-6 animate-pulse">
+                 {currentTaskModal.type === 'social' && '🌐'}
+                 {currentTaskModal.type === 'wallet' && '💎'}
+                 {currentTaskModal.type === 'invite' && '👥'}
+               </div>
+               
+               {/* Task Title */}
+               <h3 className="text-white font-mono font-bold text-xl mb-4 tracking-wider drop-shadow-[0_0_10px_rgba(0,255,255,0.5)]">
+                 {currentTaskModal.task.title}
+               </h3>
+               
+               {/* Task Message */}
+               <div className="bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-purple-500/20 backdrop-blur-xl rounded-xl p-5 border border-cyan-400/30 mb-6 shadow-inner">
+                 <p className="text-cyan-200 text-sm font-mono tracking-wider whitespace-pre-line leading-relaxed drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">
+                   {currentTaskModal.message}
+                 </p>
+               </div>
+               
+               {/* Reward Info */}
+               <div className="bg-gradient-to-r from-yellow-500/30 via-amber-500/20 to-orange-500/30 backdrop-blur-xl rounded-xl p-4 border border-yellow-400/40 mb-8 shadow-inner">
+                 <div className="flex items-center justify-center gap-2">
+                   <GiCoins className="text-yellow-400 text-xl animate-spin" style={{ animationDuration: '3s' }} />
+                   <div className="text-yellow-400 font-mono font-bold text-lg tracking-wider drop-shadow-[0_0_5px_rgba(255,255,0,0.3)]">
+                     REWARD: {currentTaskModal.task.reward}
+                   </div>
+                 </div>
+               </div>
+               
+               {/* Action Buttons */}
+               <div className="flex gap-4 justify-center">
+                 <button
+                   onClick={() => {
+                     currentTaskModal.onConfirm();
+                     setShowTaskModal(false);
+                   }}
+                   className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white font-mono font-bold py-4 px-6 rounded-xl tracking-wider hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 transition-all duration-300 shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:shadow-[0_0_40px_rgba(0,255,255,0.6)] transform hover:scale-105 border border-cyan-400/30 flex items-center gap-2"
+                 >
+                   <span className="text-lg">✅</span>
+                   <span>{currentTaskModal.confirmText}</span>
+                 </button>
+                 
+                 {currentTaskModal.cancelText && (
+                   <button
+                     onClick={() => {
+                       currentTaskModal.onCancel?.();
+                       setShowTaskModal(false);
+                     }}
+                     className="bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 text-white font-mono font-bold py-4 px-6 rounded-xl tracking-wider hover:from-gray-600 hover:via-gray-500 hover:to-gray-600 transition-all duration-300 shadow-[0_0_20px_rgba(128,128,128,0.3)] hover:shadow-[0_0_30px_rgba(128,128,128,0.5)] transform hover:scale-105 border border-gray-400/30 flex items-center gap-2"
+                   >
+                     <span className="text-lg">❌</span>
+                     <span>{currentTaskModal.cancelText}</span>
+                   </button>
+                 )}
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
 
-      {/* Custom Wallet Input Modal */}
-      {showWalletModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="relative bg-black/90 backdrop-blur-2xl rounded-xl p-6 text-center max-w-md mx-4 border border-cyan-400/30 shadow-[0_0_30px_rgba(0,255,255,0.3)]">
-            {/* Close button */}
-            <button
-              onClick={() => setShowWalletModal(false)}
-              className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl transition-colors duration-300"
-            >
-              ×
-            </button>
-            
-            {/* Corner decorations */}
-            <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-cyan-400"></div>
-            <div className="absolute top-0 right-0 w-3 h-3 border-r-2 border-t-2 border-cyan-400"></div>
-            <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 border-cyan-400"></div>
-            <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-cyan-400"></div>
-            
-            {/* Wallet Icon */}
-            <div className="text-4xl mb-4">💎</div>
-            
-            {/* Title */}
-            <h3 className="text-white font-mono font-bold text-lg mb-3 tracking-wider">
-              SUBMIT WALLET FOR AIRDROP
-            </h3>
-            
-            {/* Description */}
-            <div className="bg-cyan-500/10 backdrop-blur-xl rounded-lg p-4 border border-cyan-400/20 mb-6">
-              <p className="text-cyan-200 text-sm font-mono tracking-wider">
-                Enter your wallet address to receive exclusive airdrops and rewards!
-              </p>
-            </div>
-            
-            {/* Wallet Input */}
-            <div className="mb-6">
-              <label className="block text-cyan-400 font-mono font-bold text-sm mb-2 tracking-wider">
-                WALLET ADDRESS
-              </label>
-              <input
-                type="text"
-                value={walletAddress}
-                onChange={(e) => {
-                  setWalletAddress(e.target.value);
-                  setWalletError(''); // Clear error when user types
-                }}
-                placeholder="Enter your wallet address here..."
-                className="w-full bg-black/50 border border-cyan-400/30 rounded-lg px-4 py-3 text-white font-mono text-sm tracking-wider placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all duration-300"
-                autoFocus
-              />
-              {walletError && (
-                <div className="mt-2 text-red-400 font-mono text-xs tracking-wider">
-                  ❌ {walletError}
-                </div>
-              )}
-            </div>
-            
-            {/* Reward Info */}
-            <div className="bg-yellow-500/10 backdrop-blur-xl rounded-lg p-3 border border-yellow-400/20 mb-6">
-              <div className="text-yellow-400 font-mono font-bold text-sm tracking-wider">
-                REWARD: 100 Gems
-              </div>
-              <div className="text-yellow-300 font-mono text-xs tracking-wider mt-1">
-                + Access to exclusive airdrops
-              </div>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => {
-                  const trimmedAddress = walletAddress.trim();
-                  if (!trimmedAddress) {
-                    setWalletError('Please enter a wallet address');
-                    return;
-                  }
-                  if (trimmedAddress.length < 10) {
-                    setWalletError('Wallet address must be at least 10 characters');
-                    return;
-                  }
-                  if (trimmedAddress.length > 100) {
-                    setWalletError('Wallet address is too long');
-                    return;
-                  }
-                  
-                  // Success - close modal and show success message
-                  setShowWalletModal(false);
-                  displayTaskModal(
-                    tasks.find(t => t.id === 'submit_wallet')!,
-                    'invite',
-                    '✅ Wallet address submitted successfully!\n\nYou will receive 100 Gems and access to exclusive airdrops!',
-                    'Awesome!'
-                  );
-                }}
-                className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-mono font-bold py-3 px-6 rounded-lg tracking-wider hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-[0_0_20px_rgba(0,255,255,0.3)] flex items-center gap-2"
-              >
-                <span>💎</span>
-                <span>Submit Wallet</span>
-              </button>
-              
-              <button
-                onClick={() => setShowWalletModal(false)}
-                className="bg-gradient-to-r from-gray-600 to-gray-500 text-white font-mono font-bold py-3 px-6 rounded-lg tracking-wider hover:from-gray-500 hover:to-gray-400 transition-all duration-300 flex items-center gap-2"
-              >
-                <span>❌</span>
-                <span>Cancel</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+             {/* Enhanced Custom Wallet Input Modal */}
+       {showWalletModal && (
+         <div className="fixed inset-0 bg-black/96 backdrop-blur-xl flex items-center justify-center z-50 p-4 animate-fadeIn">
+           {/* Enhanced Dark Overlay */}
+           <div className="absolute inset-0 bg-gradient-to-br from-black/92 via-gray-900/96 to-black/92"></div>
+           
+           {/* Modal Content */}
+           <div className="relative bg-gradient-to-br from-gray-900/95 via-black/90 to-gray-900/95 backdrop-blur-2xl rounded-2xl p-8 text-center max-w-md mx-4 border-2 border-cyan-400/40 shadow-[0_0_50px_rgba(0,255,255,0.4)] animate-scaleIn">
+             {/* Glowing border effect */}
+             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 rounded-2xl blur-sm"></div>
+             
+             {/* Close button */}
+             <button
+               onClick={() => setShowWalletModal(false)}
+               className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl transition-all duration-300 hover:rotate-90 hover:scale-110 z-20"
+             >
+               ×
+             </button>
+             
+             {/* Corner decorations */}
+             <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-cyan-400 animate-pulse"></div>
+             <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+             <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+             <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-cyan-400 animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+             
+             <div className="relative z-10">
+               {/* Wallet Icon with animation */}
+               <div className="text-5xl mb-6 animate-pulse">💎</div>
+               
+               {/* Title */}
+               <h3 className="text-white font-mono font-bold text-xl mb-4 tracking-wider drop-shadow-[0_0_10px_rgba(0,255,255,0.5)]">
+                 SUBMIT WALLET FOR AIRDROP
+               </h3>
+               
+               {/* Description */}
+               <div className="bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-purple-500/20 backdrop-blur-xl rounded-xl p-5 border border-cyan-400/30 mb-6 shadow-inner">
+                 <p className="text-cyan-200 text-sm font-mono tracking-wider leading-relaxed drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">
+                   Enter your wallet address to receive exclusive airdrops and rewards!
+                 </p>
+               </div>
+               
+               {/* Wallet Input */}
+               <div className="mb-6">
+                 <label className="block text-cyan-400 font-mono font-bold text-sm mb-3 tracking-wider drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">
+                   WALLET ADDRESS
+                 </label>
+                 <input
+                   type="text"
+                   value={walletAddress}
+                   onChange={(e) => {
+                     setWalletAddress(e.target.value);
+                     setWalletError(''); // Clear error when user types
+                   }}
+                   placeholder="Enter your wallet address here..."
+                   className="w-full bg-black/60 border-2 border-cyan-400/40 rounded-xl px-4 py-4 text-white font-mono text-sm tracking-wider placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 transition-all duration-300 shadow-inner backdrop-blur-xl"
+                   autoFocus
+                 />
+                 {walletError && (
+                   <div className="mt-3 text-red-400 font-mono text-xs tracking-wider bg-red-500/10 border border-red-400/30 rounded-lg p-2">
+                     ❌ {walletError}
+                   </div>
+                 )}
+               </div>
+               
+               {/* Reward Info */}
+               <div className="bg-gradient-to-r from-yellow-500/30 via-amber-500/20 to-orange-500/30 backdrop-blur-xl rounded-xl p-4 border border-yellow-400/40 mb-8 shadow-inner">
+                 <div className="flex items-center justify-center gap-2 mb-2">
+                   <GiCoins className="text-yellow-400 text-xl animate-spin" style={{ animationDuration: '3s' }} />
+                   <div className="text-yellow-400 font-mono font-bold text-lg tracking-wider drop-shadow-[0_0_5px_rgba(255,255,0,0.3)]">
+                     REWARD: 100 Gems
+                   </div>
+                 </div>
+                 <div className="text-yellow-300 font-mono text-sm tracking-wider opacity-80">
+                   + Access to exclusive airdrops
+                 </div>
+               </div>
+               
+               {/* Action Buttons */}
+               <div className="flex gap-4 justify-center">
+                 <button
+                   onClick={() => {
+                     const trimmedAddress = walletAddress.trim();
+                     if (!trimmedAddress) {
+                       setWalletError('Please enter a wallet address');
+                       return;
+                     }
+                     if (trimmedAddress.length < 10) {
+                       setWalletError('Wallet address must be at least 10 characters');
+                       return;
+                     }
+                     if (trimmedAddress.length > 100) {
+                       setWalletError('Wallet address is too long');
+                       return;
+                     }
+                     
+                     // Success - close modal and show success message
+                     setShowWalletModal(false);
+                     displayTaskModal(
+                       tasks.find(t => t.id === 'submit_wallet')!,
+                       'invite',
+                       '✅ Wallet address submitted successfully!\n\nYou will receive 100 Gems and access to exclusive airdrops!',
+                       'Awesome!'
+                     );
+                   }}
+                   className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white font-mono font-bold py-4 px-6 rounded-xl tracking-wider hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 transition-all duration-300 shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:shadow-[0_0_40px_rgba(0,255,255,0.6)] transform hover:scale-105 border border-cyan-400/30 flex items-center gap-2"
+                 >
+                   <span className="text-lg">💎</span>
+                   <span>Submit Wallet</span>
+                 </button>
+                 
+                 <button
+                   onClick={() => setShowWalletModal(false)}
+                   className="bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 text-white font-mono font-bold py-4 px-6 rounded-xl tracking-wider hover:from-gray-600 hover:via-gray-500 hover:to-gray-600 transition-all duration-300 shadow-[0_0_20px_rgba(128,128,128,0.3)] hover:shadow-[0_0_30px_rgba(128,128,128,0.5)] transform hover:scale-105 border border-gray-400/30 flex items-center gap-2"
+                 >
+                   <span className="text-lg">❌</span>
+                   <span>Cancel</span>
+                 </button>
+               </div>
+             </div>
+                      </div>
+         </div>
+       )}
+     </div>
+     </>
+   );
 }; 

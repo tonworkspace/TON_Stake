@@ -189,7 +189,7 @@ export const useAuth = () => {
           
           // Generate referral code for new user
           const generateUserReferralCode = (userId: number) => {
-            const baseCode = `DIVINE${userId.toString().padStart(6, '0')}`;
+            const baseCode = `TONERS${userId.toString().padStart(6, '0')}`;
             const userIdHash = userId.toString();
             const suffix = userIdHash.split('').reduce((acc, char) => {
               return ((acc << 5) - acc + char.charCodeAt(0)) & 0xFFFF;
@@ -227,13 +227,18 @@ export const useAuth = () => {
           // After user creation, update with referral code
           if (newUser && !createError) {
             const referralCode = generateUserReferralCode(newUser.id);
-            await supabase
+            const { error: updateError } = await supabase
               .from('users')
               .update({ referral_code: referralCode })
               .eq('id', newUser.id);
             
-            // Add referral code to the user object
-            newUser.referral_code = referralCode;
+            if (updateError) {
+              console.error('Error setting referral code:', updateError);
+            } else {
+              // Add referral code to the user object
+              newUser.referral_code = referralCode;
+              existingUser = newUser; // Use the new user as existing user
+            }
           }
 
           if (createError) {
