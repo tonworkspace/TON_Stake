@@ -4,6 +4,8 @@ import { useNotificationSystem } from './NotificationSystem';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabaseClient';
 import { migrateToUserSpecificKeys, validateUserDataIsolation, checkForDataLeakage, clearUserData } from '@/utils/userDataIsolation';
+import { NFTMinter } from './NFTMinter';
+import { useTonAddress } from '@tonconnect/ui-react';
 
 interface Upgrade {
   id: string;
@@ -239,6 +241,46 @@ export const DivineMiningGame: React.FC = () => {
     showSystemNotification,
     // showOfflineRewardsNotification,
   } = useNotificationSystem();
+  const userAddress = useTonAddress();
+
+  const [hasMintedSBT, setHasMintedSBT] = useState(false);
+  const [isCheckingMintStatus, setIsCheckingMintStatus] = useState(true);
+
+  useEffect(() => {
+    const checkMintStatus = async () => {
+        if (!userAddress) {
+            setIsCheckingMintStatus(false);
+            return;
+        }
+
+        try {
+            const SBT_CONTRACT_ADDRESS = "EQBpQbkNRhzCAalWxnFtU5z28rS_RCxBlEuC010bAjsh3TjU";
+            const response = await fetch(
+                `https://tonapi.io/v2/accounts/${userAddress}/nfts?collection=${SBT_CONTRACT_ADDRESS}`,
+                { headers: { 'Accept': 'application/json' } }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data && Array.isArray(data.nft_items)) {
+                setHasMintedSBT(data.nft_items.length > 0);
+            } else {
+                setHasMintedSBT(false);
+            }
+        } catch (error) {
+            console.error('Error checking SBT mint status:', error);
+            setHasMintedSBT(false); // Assume false on error
+        } finally {
+            setIsCheckingMintStatus(false);
+        }
+    };
+
+    checkMintStatus();
+  }, [userAddress]);
   
   // Add missing state variables
   // const [showHelp, setShowHelp] = useState(false);
@@ -4524,6 +4566,28 @@ export const DivineMiningGame: React.FC = () => {
 const isPPSUpgradeType = (upgradeId: string): boolean => {
   return !Object.values(UPGRADE_CATEGORIES).flat().includes(upgradeId);
 };
+
+  if (isCheckingMintStatus) {
+    return (
+        <div className="flex items-center justify-center h-full">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+             <p className="ml-4 text-white">Checking for your Miner NFT...</p>
+        </div>
+    );
+  }
+
+  if (!hasMintedSBT) {
+      return (
+          <div className="p-4 max-w-md mx-auto">
+               <h1 className="text-2xl font-bold text-center text-white mb-4">Mint your Miner NFT</h1>
+               <p className="text-center text-gray-400 mb-8">You need to mint the official Miner NFT to get access to the Divine Mining Game.</p>
+              <NFTMinter onMintSuccess={async () => {
+                  setHasMintedSBT(true);
+                  showSystemNotification('Mint Successful!', 'Welcome to the Divine Mining Game!', 'success');
+              }} />
+          </div>
+      )
+  }
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center space-y-4 overflow-y-auto game-scrollbar">
