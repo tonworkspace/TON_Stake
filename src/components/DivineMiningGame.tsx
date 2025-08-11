@@ -287,7 +287,7 @@ export const DivineMiningGame: React.FC = () => {
     showSystemNotification('Mint Successful!', 'You can now start mining.', 'success');
   };
 
-  const handleMintStatusChange = (status: 'idle' | 'loading' | 'success' | 'error', userHasMinted: boolean) => {
+  const handleMintStatusChange = (_status: 'idle' | 'loading' | 'success' | 'error', userHasMinted: boolean) => {
     setHasMinted(userHasMinted);
   };
 
