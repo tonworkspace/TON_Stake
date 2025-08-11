@@ -279,7 +279,6 @@ export const DivineMiningGame: React.FC = () => {
   // Add purchasing state
   const [purchasingUpgrade, setPurchasingUpgrade] = useState<string | null>(null);
   const [hasMinted, setHasMinted] = useState(false);
-  const [isCheckingMintStatus, setIsCheckingMintStatus] = useState(true);
 
   const miningIntervalRef = useRef<NodeJS.Timeout>();
 
@@ -290,9 +289,6 @@ export const DivineMiningGame: React.FC = () => {
 
   const handleMintStatusChange = (status: 'idle' | 'loading' | 'success' | 'error', userHasMinted: boolean) => {
     setHasMinted(userHasMinted);
-    if (isCheckingMintStatus) {
-        setIsCheckingMintStatus(false);
-    }
   };
 
   // Helper function to get user-specific keys with complete isolation
@@ -4537,15 +4533,6 @@ export const DivineMiningGame: React.FC = () => {
 const isPPSUpgradeType = (upgradeId: string): boolean => {
   return !Object.values(UPGRADE_CATEGORIES).flat().includes(upgradeId);
 };
-
-  if (isCheckingMintStatus) {
-    return (
-      <div className="flex items-center justify-center py-8">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="ml-4 text-white">Checking mint status...</p>
-      </div>
-    );
-  }
 
   if (!hasMinted) {
     return (
