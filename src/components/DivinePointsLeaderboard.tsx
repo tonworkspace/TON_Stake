@@ -189,37 +189,40 @@ export const DivinePointsLeaderboard: React.FC = () => {
         // Load real data from database
         console.log('Loading real leaderboard data...');
         const allTimeData = await getDivinePointsLeaderboard(100);
-        console.log('All time data:', allTimeData);
-        console.log('All time data length:', allTimeData?.length);
-        
         const dailyData = await getDivinePointsLeaderboardByPeriod('daily', 50);
-        console.log('Daily data:', dailyData);
-        console.log('Daily data length:', dailyData?.length);
-        
         const weeklyData = await getDivinePointsLeaderboardByPeriod('weekly', 50);
-        console.log('Weekly data:', weeklyData);
-        console.log('Weekly data length:', weeklyData?.length);
-        
         const monthlyData = await getDivinePointsLeaderboardByPeriod('monthly', 50);
-        console.log('Monthly data:', monthlyData);
-        console.log('Monthly data length:', monthlyData?.length);
         
+        // Helper function to sort and rank players
+        const sortAndRank = (players: DivinePlayer[]): DivinePlayer[] => {
+            if (!players) return [];
+            return players
+                .sort((a, b) => b.divinePoints - a.divinePoints)
+                .map((player, index) => ({
+                    ...player,
+                    rank: index + 1,
+                }));
+        };
+
+        const sortedAllTimeData = sortAndRank(allTimeData);
+        const sortedDailyData = sortAndRank(dailyData);
+        const sortedWeeklyData = sortAndRank(weeklyData);
+        const sortedMonthlyData = sortAndRank(monthlyData);
+
         // Load global stats
         const globalStats = await getDivinePointsStats();
-        console.log('Global stats:', globalStats);
         
         // Get user rank if logged in
         let userRankData = null;
         if (user?.id && userDivinePoints > 0) {
           userRankData = await getUserDivinePointsRank(user.id);
-          console.log('User rank data:', userRankData);
         }
 
         setLeaderboardData({
-          topPlayers: allTimeData || [],
-          dailyWinners: dailyData || [],
-          weeklyWinners: weeklyData || [],
-          monthlyWinners: monthlyData || [],
+          topPlayers: sortedAllTimeData,
+          dailyWinners: sortedDailyData,
+          weeklyWinners: sortedWeeklyData,
+          monthlyWinners: sortedMonthlyData,
           totalPlayers: globalStats.totalPlayers,
           lastUpdated: Date.now()
         });
@@ -270,7 +273,7 @@ export const DivinePointsLeaderboard: React.FC = () => {
     };
 
     loadLeaderboardData();
-  }, [user?.id, userDivinePoints]);
+  }, [user?.id, userDivinePoints, getUserSpecificKey]);
 
  
   const getCurrentTabData = () => {
