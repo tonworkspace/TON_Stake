@@ -208,42 +208,53 @@ export const ReferralSystem: React.FC = () => {
         });
       }
 
-      // Load downline data
-      const downlineResponse: ReferralResponse = await supabase
-        .from('referrals')
-        .select(`
-          *,
-          referred:users!referred_id(
-            id,
-            username,
-            rank,
-            total_earned,
-            created_at,
-            is_active,
-            direct_referrals
-          )
-        `)
-        .eq('referrer_id', user.id);
+      // Load downline data using the new RPC function
+      const { data: downlineRpcData, error: downlineError } = await supabase
+        .rpc('get_downline', { p_user_id: user.id });
 
-      // Process downline data
-      const downlineArray: DownlineInfo[] = downlineResponse.data?.map(ref => ({
-        id: ref.referred.id.toString(),
-        username: ref.referred.username,
-        rank: ref.referred.rank || 'Novice',
-        totalEarned: ref.referred.total_earned || 0,
-        joinedAt: new Date(ref.referred.created_at).getTime(),
-        isActive: ref.referred.is_active,
-        level: 1,
-        directReferrals: ref.referred.direct_referrals || 0
-      })) || [];
+      if (downlineError) {
+        console.error('Error fetching downline data:', downlineError);
+        return;
+      }
+
+      const buildDownlineTree = (downline: any[], parentId: number | null): DownlineInfo[] => {
+        return downline
+          .filter(member => member.referrer_id === parentId)
+          .map(child => ({
+            id: child.id.toString(),
+            username: child.username,
+            rank: child.rank || 'Novice',
+            totalEarned: child.total_earned || 0,
+            joinedAt: new Date(child.created_at).getTime(),
+            isActive: child.is_active,
+            level: child.level,
+            directReferrals: child.direct_referrals || 0,
+            referrer_id: child.referrer_id,
+            children: buildDownlineTree(downline, child.id),
+          }));
+      };
+
+      const downlineTree = buildDownlineTree(downlineRpcData || [], user.id);
+
+      const flattenDownline = (nodes: DownlineInfo[]): DownlineInfo[] => {
+        return nodes.reduce((acc, node) => {
+          acc.push(node);
+          if (node.children) {
+            acc.push(...flattenDownline(node.children));
+          }
+          return acc;
+        }, [] as DownlineInfo[]);
+      };
+
+      const allDownlineMembers = flattenDownline(downlineTree);
 
       // Update states
       setUplineData(uplineArray);
-      setDownlineData(downlineArray);
+      setDownlineData(downlineTree);
       setNetworkStats({
-        totalNetworkSize: downlineArray.length,
-        totalNetworkEarnings: downlineArray.reduce((sum, m) => sum + m.totalEarned, 0),
-        networkLevels: Math.max(...downlineArray.map(m => m.level), 0),
+        totalNetworkSize: allDownlineMembers.length,
+        totalNetworkEarnings: allDownlineMembers.reduce((sum, m) => sum + m.totalEarned, 0),
+        networkLevels: allDownlineMembers.length > 0 ? Math.max(...allDownlineMembers.map(m => m.level)) : 0,
         yourPosition: uplineArray.length + 1
       });
 

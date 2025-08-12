@@ -30,6 +30,8 @@ export interface DownlineInfo {
   isActive: boolean;
   level: number; // How many levels down (1 = direct referral)
   directReferrals: number;
+  referrer_id?: number;
+  children: DownlineInfo[];
 }
 
 export interface ReferralData {

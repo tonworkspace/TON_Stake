@@ -13,17 +13,64 @@ interface NetworkTabProps {
   user: any;
 }
 
+const DownlineNode: React.FC<{ member: DownlineInfo }> = ({ member }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const hasChildren = member.children && member.children.length > 0;
+
+  return (
+    <div style={{ paddingLeft: `${(member.level - 1) * 16}px` }}>
+      <div className="bg-black/30 rounded-lg p-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {hasChildren && (
+            <button onClick={() => setIsOpen(!isOpen)} className="text-cyan-400">
+              {isOpen ? '▼' : '▶'}
+            </button>
+          )}
+          <div className={`w-2 h-2 rounded-full ${member.isActive ? 'bg-green-400' : 'bg-gray-500'}`} />
+          <div>
+            <div className="text-cyan-300 font-mono text-xs">{member.username}</div>
+            <div className="text-gray-500 font-mono text-xs">
+              Lvl {member.level} • {member.directReferrals} refs
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-cyan-300 font-mono text-xs">{member.totalEarned.toLocaleString()}</div>
+          <div className="text-gray-500 font-mono text-xs">{member.rank}</div>
+        </div>
+      </div>
+      {isOpen && hasChildren && (
+        <div className="mt-1 space-y-1">
+          {member.children.map(child => (
+            <DownlineNode key={child.id} member={child} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const NetworkTab: React.FC<NetworkTabProps> = ({
   uplineData,
   downlineData,
   networkStats,
 }) => {
-  // Calculate additional stats
-  const activeMembers = downlineData.filter(m => m.isActive).length;
-  const totalDirectEarnings = downlineData.reduce((sum, m) => sum + (m.isActive ? m.totalEarned : 0), 0);
-  const averageEarnings = downlineData.length ? Math.floor(totalDirectEarnings / downlineData.length) : 0;
-  const topEarner = downlineData.reduce((max, m) => m.totalEarned > max.totalEarned ? m : max, { totalEarned: 0 });
-  
+  const flattenDownline = (nodes: DownlineInfo[]): DownlineInfo[] => {
+    return nodes.reduce((acc, node) => {
+      acc.push(node);
+      if (node.children) {
+        acc.push(...flattenDownline(node.children));
+      }
+      return acc;
+    }, [] as DownlineInfo[]);
+  };
+
+  const allDownlineMembers = flattenDownline(downlineData);
+  const activeMembers = allDownlineMembers.filter(m => m.isActive).length;
+  const totalNetworkEarnings = allDownlineMembers.reduce((sum, m) => sum + m.totalEarned, 0);
+  const averageEarnings = allDownlineMembers.length ? Math.floor(totalNetworkEarnings / allDownlineMembers.length) : 0;
+  const topEarner = allDownlineMembers.reduce((max, m) => m.totalEarned > max.totalEarned ? m : max, { totalEarned: 0 });
+
   return (
     <div className="space-y-2">
       {/* Enhanced Network Overview */}
@@ -45,7 +92,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
             <div className="flex justify-between items-center">
               <div>
                 <div className="text-gray-400">Earnings</div>
-                <div className="text-cyan-300 font-bold">{totalDirectEarnings.toLocaleString()}</div>
+                <div className="text-cyan-300 font-bold">{totalNetworkEarnings.toLocaleString()}</div>
               </div>
               <div>
                 <div className="text-gray-400">Avg</div>
@@ -62,31 +109,17 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
           {downlineData.length > 0 ? (
             <>
               {downlineData.map((member) => (
-                <div key={member.id} className="bg-black/30 rounded-lg p-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${member.isActive ? 'bg-green-400' : 'bg-gray-500'}`} />
-                    <div>
-                      <div className="text-cyan-300 font-mono text-xs">{member.username}</div>
-                      <div className="text-gray-500 font-mono text-xs">
-                        {Math.floor((Date.now() - member.joinedAt) / (1000 * 60 * 60 * 24))}d • {member.directReferrals} refs
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-cyan-300 font-mono text-xs">{member.totalEarned.toLocaleString()}</div>
-                    <div className="text-gray-500 font-mono text-xs">{member.rank}</div>
-                  </div>
-                </div>
+                <DownlineNode key={member.id} member={member} />
               ))}
               
               {/* Quick Stats */}
               <div className="mt-2 pt-2 border-t border-cyan-500/20">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="text-gray-400">
-                    Top Earner: <span className="text-cyan-300">{topEarner.totalEarned.toLocaleString()}</span>
+                    Top Earner: <span className="text-cyan-300">{topEarner.username} ({topEarner.totalEarned.toLocaleString()})</span>
                   </div>
                   <div className="text-right text-gray-400">
-                    Active Rate: <span className="text-cyan-300">{Math.round((activeMembers / downlineData.length) * 100)}%</span>
+                    Active Rate: <span className="text-cyan-300">{allDownlineMembers.length > 0 ? Math.round((activeMembers / allDownlineMembers.length) * 100) : 0}%</span>
                   </div>
                 </div>
               </div>

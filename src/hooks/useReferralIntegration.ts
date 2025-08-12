@@ -594,65 +594,12 @@ export const useReferralIntegration = () => {
       const referrerIdMatch = startParam.match(/TONERS(\d{6})/i);
       const referrerId = parseInt(referrerIdMatch![1]);
       
-      // Check if user already has a referrer
-      const { data: existingUser, error: userError } = await supabase
-        .from('users')
-        .select('referrer_id')
-        .eq('id', user.id)
-        .single();
-      
-      if (userError) {
-        console.error('Error checking existing user:', userError);
-        await trackReferralAttempt(startParam, 'failed', 'Database error');
-        setDebugInfo(prev => ({ ...prev, error: 'Database error', processed: true }));
-        return;
-      }
-      
-      // Enhanced duplicate prevention checks
-      if (existingUser?.referrer_id) {
-        console.log('User already has a referrer:', existingUser.referrer_id);
-        await trackReferralAttempt(startParam, 'duplicate', 'Already has referrer');
-        setDebugInfo(prev => ({ ...prev, error: 'Already has referrer', processed: true }));
-        return;
-      }
-
-      // Check if referral relationship already exists in referrals table
-      const { data: existingReferral, error: existingReferralError } = await supabase
-        .from('referrals')
-        .select('id')
-        .eq('referrer_id', referrerId)
-        .eq('referred_id', user.id)
-        .single();
-
-      if (existingReferralError && existingReferralError.code !== 'PGRST116') {
-        console.error('Error checking existing referral:', existingReferralError);
-        await trackReferralAttempt(startParam, 'failed', 'Database error checking duplicates');
-        setDebugInfo(prev => ({ ...prev, error: 'Database error', processed: true }));
-        return;
-      }
-
-      if (existingReferral) {
-        console.log('Referral relationship already exists:', existingReferral.id);
-        await trackReferralAttempt(startParam, 'duplicate', 'Referral relationship exists');
-        setDebugInfo(prev => ({ ...prev, error: 'Referral relationship already exists', processed: true }));
-        return;
-      }
-
-      // Prevent self-referral
-      if (referrerId === user.id) {
-        console.log('Self-referral attempt detected');
-        await trackReferralAttempt(startParam, 'invalid', 'Cannot refer yourself');
-        setDebugInfo(prev => ({ ...prev, error: 'Cannot refer yourself', processed: true }));
-        return;
-      }
-      
-      // Check if referrer exists
       const { data: referrer, error: referrerError } = await supabase
         .from('users')
         .select('id, username, telegram_id')
         .eq('id', referrerId)
         .single();
-      
+
       if (referrerError || !referrer) {
         console.log('Referrer not found:', referrerId);
         await trackReferralAttempt(startParam, 'failed', 'Referrer not found');
@@ -660,59 +607,16 @@ export const useReferralIntegration = () => {
         return;
       }
 
-      // Prevent circular referrals (check if referrer was referred by current user)
-      const { data: circularCheck, error: circularError } = await supabase
-        .from('referrals')
-        .select('id')
-        .eq('referrer_id', user.id)
-        .eq('referred_id', referrerId)
-        .single();
+      const { data: success, error: rpcError } = await supabase.rpc('create_referral', {
+        p_referrer_id: referrerId,
+        p_referred_id: user.id
+      });
 
-      if (circularError && circularError.code !== 'PGRST116') {
-        console.error('Error checking circular referrals:', circularError);
-      }
-
-      if (circularCheck) {
-        console.log('Circular referral attempt detected');
-        await trackReferralAttempt(startParam, 'invalid', 'Circular referral not allowed');
-        setDebugInfo(prev => ({ ...prev, error: 'Circular referral not allowed', processed: true }));
+      if (rpcError || !success) {
+        console.error('Error creating referral via RPC:', rpcError);
+        await trackReferralAttempt(startParam, 'duplicate', 'Referral already exists or failed');
+        setDebugInfo(prev => ({ ...prev, error: 'Referral already exists or failed', processed: true }));
         return;
-      }
-      
-      console.log('Valid referrer found:', referrer.username);
-      
-      // Create referral relationship
-      const { error: referralError } = await supabase
-        .from('referrals')
-        .insert({
-          referrer_id: referrerId,
-          referred_id: user.id
-        });
-      
-      if (referralError) {
-        console.error('Error creating referral:', referralError);
-        setDebugInfo(prev => ({ ...prev, error: 'Failed to create referral', processed: true }));
-        return;
-      }
-      
-      // Update user's referrer_id
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ referrer_id: referrerId })
-        .eq('id', user.id);
-      
-      if (updateError) {
-        console.error('Error updating user referrer:', updateError);
-        setDebugInfo(prev => ({ ...prev, error: 'Failed to update user', processed: true }));
-        return;
-      }
-      
-      // Update referrer's direct_referrals count
-      const { error: countError } = await supabase
-        .rpc('increment_direct_referrals', { user_id: referrerId });
-      
-      if (countError) {
-        console.error('Error updating referrer count:', countError);
       }
       
       // Give welcome bonus to new user
@@ -984,44 +888,6 @@ export const useReferralIntegration = () => {
       
       const referrerId = parseInt(referrerIdMatch[1]);
       
-      // Enhanced duplicate prevention checks
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('referrer_id')
-        .eq('id', user.id)
-        .single();
-      
-      if (existingUser?.referrer_id) {
-        await trackReferralAttempt(referralCode, 'duplicate', 'User already has a referrer');
-        return { success: false, error: 'You already have a referrer' };
-      }
-
-      // Check if referral relationship already exists in referrals table
-      const { data: existingReferral, error: existingReferralError } = await supabase
-        .from('referrals')
-        .select('id')
-        .eq('referrer_id', referrerId)
-        .eq('referred_id', user.id)
-        .single();
-
-      if (existingReferralError && existingReferralError.code !== 'PGRST116') {
-        console.error('Error checking existing referral:', existingReferralError);
-        await trackReferralAttempt(referralCode, 'failed', 'Database error checking duplicates');
-        return { success: false, error: 'Database error occurred' };
-      }
-
-      if (existingReferral) {
-        await trackReferralAttempt(referralCode, 'duplicate', 'Referral relationship already exists');
-        return { success: false, error: 'Referral relationship already exists' };
-      }
-
-      // Prevent self-referral
-      if (referrerId === user.id) {
-        await trackReferralAttempt(referralCode, 'invalid', 'Cannot refer yourself');
-        return { success: false, error: 'You cannot refer yourself' };
-      }
-      
-      // Check if referrer exists
       const { data: referrer, error: referrerError } = await supabase
         .from('users')
         .select('id, username, telegram_id')
@@ -1032,63 +898,16 @@ export const useReferralIntegration = () => {
         await trackReferralAttempt(referralCode, 'failed', 'Referrer not found');
         return { success: false, error: 'Referrer not found' };
       }
+      
+      const { data: success, error: rpcError } = await supabase.rpc('create_referral', {
+        p_referrer_id: referrerId,
+        p_referred_id: user.id
+      });
 
-      // Prevent circular referrals (check if referrer was referred by current user)
-      const { data: circularCheck, error: circularError } = await supabase
-        .from('referrals')
-        .select('id')
-        .eq('referrer_id', user.id)
-        .eq('referred_id', referrerId)
-        .single();
-
-      if (circularError && circularError.code !== 'PGRST116') {
-        console.error('Error checking circular referrals:', circularError);
-      }
-
-      if (circularCheck) {
-        await trackReferralAttempt(referralCode, 'invalid', 'Circular referral not allowed');
-        return { success: false, error: 'Circular referral not allowed - you cannot refer someone who referred you' };
-      }
-      
-      // Create referral relationship
-      const { error: referralError } = await supabase
-        .from('referrals')
-        .insert({
-          referrer_id: referrerId,
-          referred_id: user.id,
-          status: 'active'
-        });
-      
-      if (referralError) {
-        console.error('Error creating referral:', referralError);
-        await trackReferralAttempt(referralCode, 'failed', 'Failed to create referral relationship');
-        return { success: false, error: 'Failed to create referral relationship' };
-      }
-      
-      // Update user's referrer_id
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ referrer_id: referrerId })
-        .eq('id', user.id);
-      
-      if (updateError) {
-        console.error('Error updating user referrer:', updateError);
-        await trackReferralAttempt(referralCode, 'failed', 'Failed to update user referrer');
-        return { success: false, error: 'Failed to update user referrer' };
-      }
-      
-      // Update referrer's direct_referrals count
-      try {
-        const { error: countError } = await supabase
-          .rpc('increment_direct_referrals', { user_id: referrerId });
-        
-        if (countError) {
-          console.error('Error updating referrer count:', countError);
-          // Don't fail the whole process for this
-        }
-      } catch (error) {
-        console.error('Error incrementing referrer count:', error);
-        // Don't fail the whole process for this
+      if (rpcError || !success) {
+        console.error('Error creating referral via RPC:', rpcError);
+        await trackReferralAttempt(referralCode, 'duplicate', 'Referral already exists or failed');
+        return { success: false, error: 'Referral already exists or failed' };
       }
       
       // Track the successful attempt
