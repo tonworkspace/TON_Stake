@@ -253,8 +253,9 @@ export const ReferralSystem: React.FC = () => {
   }, [user?.id]);
 
   const copyReferralCode = useCallback(async () => {
+    const referralLink = `https://t.me/Tonstak3it_bot/start?startapp=${referralData.code}`;
     try {
-      await navigator.clipboard.writeText(referralData.code);
+      await navigator.clipboard.writeText(referralLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
