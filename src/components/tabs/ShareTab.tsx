@@ -124,7 +124,7 @@ export const ShareTab: React.FC<ShareTabProps> = ({
             <div className="text-cyan-100 font-bold">{referralData.totalReferrals}</div>
           </div>
           <div>
-            <div className="text-cyan-300 text-sm">Points</div>
+            <div className="text-cyan-300 text-sm">STKN</div>
             <div className="text-cyan-100 font-bold">{referralData.rewards.points}</div>
           </div>
         </div>

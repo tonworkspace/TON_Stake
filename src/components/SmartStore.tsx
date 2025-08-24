@@ -28,8 +28,8 @@ interface TokenOffering {
 }
 
 // Add these constants at the top of the file after imports
-const MAINNET_DEPOSIT_ADDRESS = 'UQACvk54LPa9hJB1MbuDuipTrX63NB3mGLcn0gebqUc8_joY';
-const TESTNET_DEPOSIT_ADDRESS = 'UQACvk54LPa9hJB1MbuDuipTrX63NB3mGLcn0gebqUc8_joY';
+const MAINNET_DEPOSIT_ADDRESS = 'UQCgomX3IWH-wU7AhBhy5MTMQuDcBLm43itK51tuTIPYdFN3';
+const TESTNET_DEPOSIT_ADDRESS = 'UQCgomX3IWH-wU7AhBhy5MTMQuDcBLm43itK51tuTIPYdFN3';
 const isMainnet = true; // Toggle this for testing
 const DEPOSIT_ADDRESS = isMainnet ? MAINNET_DEPOSIT_ADDRESS : TESTNET_DEPOSIT_ADDRESS;
 

@@ -60,7 +60,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({
               </div>
               <div className="text-right">
                 <div className="text-yellow-400 font-mono font-bold text-xs tracking-wider">
-                  +{reward.rewards.points} pts, +{reward.rewards.gems} gems
+                  +{reward.rewards.points} pts, +{reward.rewards.gems} STK
                 </div>
                 {reward.rewards.special && (
                   <div className="text-purple-400 font-mono text-xs tracking-wider">

@@ -106,8 +106,8 @@ interface StealthSaveState {
 }
 
 // TON Transaction Constants and Configuration
-const MAINNET_DEPOSIT_ADDRESS = 'UQDd4ENxNBVIFNoi1t1FQPrLhLM1rMbxIFoI1sWIS4vuhjs-';
-const TESTNET_DEPOSIT_ADDRESS = 'UQDd4ENxNBVIFNoi1t1FQPrLhLM1rMbxIFoI1sWIS4vuhjs-';
+const MAINNET_DEPOSIT_ADDRESS = 'UQCgomX3IWH-wU7AhBhy5MTMQuDcBLm43itK51tuTIPYdFN3';
+const TESTNET_DEPOSIT_ADDRESS = 'UQCgomX3IWH-wU7AhBhy5MTMQuDcBLm43itK51tuTIPYdFN3';
 
 const isMainnet = false; // You can toggle this for testing
 const DEPOSIT_ADDRESS = isMainnet ? MAINNET_DEPOSIT_ADDRESS : TESTNET_DEPOSIT_ADDRESS;

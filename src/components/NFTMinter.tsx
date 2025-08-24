@@ -306,7 +306,7 @@ export const NFTMinter = ({ onStatusChange, onMintSuccess }: NFTMinterProps = {}
                     {mintingStatus === 'success' && (
                         <div className="mt-4 text-center">
                             <p className="text-green-400 text-sm animate-fade-in">
-                                🎉 Congratulations! Your TON Fortune Stakers NFT has been minted successfully.
+                                🎉 Congratulations! Your NFT has been minted successfully.
                             </p>
                         </div>
                     )}
@@ -314,7 +314,7 @@ export const NFTMinter = ({ onStatusChange, onMintSuccess }: NFTMinterProps = {}
                     {mintingStatus === 'error' && (
                         <div className="mt-4 text-center">
                             <p className="text-red-400 text-sm animate-fade-in">
-                                ❌ There was an error minting your TON Fortune Stakers NFT. Please try again.
+                                ❌ There was an error minting your NFT. Please try again.
                             </p>
                         </div>
                     )}
@@ -334,7 +334,7 @@ export const NFTMinter = ({ onStatusChange, onMintSuccess }: NFTMinterProps = {}
                     <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>Minting this NFT allows you to whitelist your wallet for weekly TON distributions from the staking pool.</span>
+                    <span>Minting this NFT is required to start mining for Stakers Token.</span>
                 </div>
             </div>
         </div>

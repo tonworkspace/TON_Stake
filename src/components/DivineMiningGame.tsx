@@ -277,8 +277,18 @@ export const DivineMiningGame: React.FC = () => {
   
   // Add purchasing state
   const [purchasingUpgrade, setPurchasingUpgrade] = useState<string | null>(null);
+  // const [hasMinted, setHasMinted] = useState(false);
 
   const miningIntervalRef = useRef<NodeJS.Timeout>();
+
+  // const handleMintSuccess = async () => {
+  //   setHasMinted(true);
+  //   showSystemNotification('Mint Successful!', 'You can now start mining.', 'success');
+  // };
+
+  // const handleMintStatusChange = (_status: 'idle' | 'loading' | 'success' | 'error', userHasMinted: boolean) => {
+  //   setHasMinted(userHasMinted);
+  // };
 
   // Helper function to get user-specific keys with complete isolation
   const getUserSpecificKey = useCallback((baseKey: string): string => {
@@ -4298,40 +4308,40 @@ export const DivineMiningGame: React.FC = () => {
   }, []);
 
   // Function to test all upgrade effects
-  const testUpgradeEffects = useCallback(() => {
-    console.log('🧪 Testing all upgrade effects...');
+  // const testUpgradeEffects = useCallback(() => {
+  //   console.log('🧪 Testing all upgrade effects...');
     
-    // Test energy regeneration
-    const energyRegen = getEnergyRegenerationRate();
-    console.log(`Energy Regeneration: ${energyRegen}/sec`);
+  //   // Test energy regeneration
+  //   const energyRegen = getEnergyRegenerationRate();
+  //   console.log(`Energy Regeneration: ${energyRegen}/sec`);
     
-    // Test energy efficiency
-    const energyEfficiency = getEnergyEfficiencyBonus();
-    console.log(`Energy Efficiency Bonus: ${(energyEfficiency * 100).toFixed(1)}%`);
+  //   // Test energy efficiency
+  //   const energyEfficiency = getEnergyEfficiencyBonus();
+  //   console.log(`Energy Efficiency Bonus: ${(energyEfficiency * 100).toFixed(1)}%`);
     
-    // Test enhanced mining rate
-    const enhancedRate = getEnhancedMiningRate();
-    console.log(`Enhanced Mining Rate: ${enhancedRate}/sec`);
+  //   // Test enhanced mining rate
+  //   const enhancedRate = getEnhancedMiningRate();
+  //   console.log(`Enhanced Mining Rate: ${enhancedRate}/sec`);
     
-    // Test upgrade categorization
-    upgrades.forEach(upgrade => {
-      const category = getUpgradeCategory(upgrade.id);
-      const isPPS = isPPSUpgradeType(upgrade.id);
-      console.log(`Upgrade ${upgrade.name} (${upgrade.id}): Category=${category}, PPS=${isPPS}, Level=${upgrade.level}, Effect=${upgrade.effectValue}`);
-    });
+  //   // Test upgrade categorization
+  //   upgrades.forEach(upgrade => {
+  //     const category = getUpgradeCategory(upgrade.id);
+  //     const isPPS = isPPSUpgradeType(upgrade.id);
+  //     console.log(`Upgrade ${upgrade.name} (${upgrade.id}): Category=${category}, PPS=${isPPS}, Level=${upgrade.level}, Effect=${upgrade.effectValue}`);
+  //   });
     
-    // Test auto-mining
-    const autoMiningUpgrades = upgrades.filter(u => UPGRADE_CATEGORIES.AUTO_MINING.includes(u.id));
-    const hasAutoMining = autoMiningUpgrades.some(u => u.level > 0);
-    console.log(`Auto-mining: ${hasAutoMining ? 'ENABLED' : 'DISABLED'}`);
+  //   // Test auto-mining
+  //   const autoMiningUpgrades = upgrades.filter(u => UPGRADE_CATEGORIES.AUTO_MINING.includes(u.id));
+  //   const hasAutoMining = autoMiningUpgrades.some(u => u.level > 0);
+  //   console.log(`Auto-mining: ${hasAutoMining ? 'ENABLED' : 'DISABLED'}`);
     
-    // Test offline bonus
-    const offlineUpgrades = upgrades.filter(u => UPGRADE_CATEGORIES.OFFLINE_BONUS.includes(u.id));
-    const offlineBonus = offlineUpgrades.reduce((sum, u) => sum + (u.effectValue * u.level), 0);
-    console.log(`Offline Bonus: ${(offlineBonus * 100).toFixed(1)}%`);
+  //   // Test offline bonus
+  //   const offlineUpgrades = upgrades.filter(u => UPGRADE_CATEGORIES.OFFLINE_BONUS.includes(u.id));
+  //   const offlineBonus = offlineUpgrades.reduce((sum, u) => sum + (u.effectValue * u.level), 0);
+  //   console.log(`Offline Bonus: ${(offlineBonus * 100).toFixed(1)}%`);
     
-    showSystemNotification('Upgrade Test Complete', 'Check console for detailed upgrade effect analysis', 'info');
-  }, [upgrades, getEnergyRegenerationRate, getEnergyEfficiencyBonus, getEnhancedMiningRate, showSystemNotification]);
+  //   showSystemNotification('Upgrade Test Complete', 'Check console for detailed upgrade effect analysis', 'info');
+  // }, [upgrades, getEnergyRegenerationRate, getEnergyEfficiencyBonus, getEnhancedMiningRate, showSystemNotification]);
 
   // Function to force reload upgrades
   const forceReloadUpgrades = useCallback(() => {
@@ -4394,53 +4404,53 @@ export const DivineMiningGame: React.FC = () => {
   }, [getUserSpecificKey, getInitialUpgrades, showSystemNotification]);
 
   // Debug function to verify upgrade system
-  const debugUpgradeSystem = useCallback(() => {
-    console.log('🔍 Upgrade System Debug Report:');
-    console.log('Current Game State:', {
-      divinePoints: gameState.divinePoints,
-      pointsPerSecond: gameState.pointsPerSecond,
-      upgradesPurchased: gameState.upgradesPurchased,
-      currentEnergy: gameState.currentEnergy,
-      maxEnergy: gameState.maxEnergy,
-      offlineEfficiencyBonus: gameState.offlineEfficiencyBonus
-    });
+  // const debugUpgradeSystem = useCallback(() => {
+  //   console.log('🔍 Upgrade System Debug Report:');
+  //   console.log('Current Game State:', {
+  //     divinePoints: gameState.divinePoints,
+  //     pointsPerSecond: gameState.pointsPerSecond,
+  //     upgradesPurchased: gameState.upgradesPurchased,
+  //     currentEnergy: gameState.currentEnergy,
+  //     maxEnergy: gameState.maxEnergy,
+  //     offlineEfficiencyBonus: gameState.offlineEfficiencyBonus
+  //   });
     
-    console.log('Upgrade Calculations:', {
-      energyRegenRate: getEnergyRegenerationRate(),
-      energyEfficiencyBonus: getEnergyEfficiencyBonus(),
-      enhancedMiningRate: getEnhancedMiningRate(),
-      totalUpgrades: upgrades.length,
-      availableUpgrades: getFilteredUpgrades().filter(u => isUpgradeAvailable(u) && !isUpgradeMaxed(u)).length,
-      maxedUpgrades: upgrades.filter(u => isUpgradeMaxed(u)).length
-    });
+  //   console.log('Upgrade Calculations:', {
+  //     energyRegenRate: getEnergyRegenerationRate(),
+  //     energyEfficiencyBonus: getEnergyEfficiencyBonus(),
+  //     enhancedMiningRate: getEnhancedMiningRate(),
+  //     totalUpgrades: upgrades.length,
+  //     availableUpgrades: getFilteredUpgrades().filter(u => isUpgradeAvailable(u) && !isUpgradeMaxed(u)).length,
+  //     maxedUpgrades: upgrades.filter(u => isUpgradeMaxed(u)).length
+  //   });
     
-    console.log('Upgrade Details:', upgrades.map(u => ({
-      id: u.id,
-      name: u.name,
-      level: u.level,
-      maxLevel: u.maxLevel,
-      effectValue: u.effectValue,
-      isAvailable: isUpgradeAvailable(u),
-      isMaxed: isUpgradeMaxed(u),
-      cost: getUpgradeCost(u)
-    })));
+  //   console.log('Upgrade Details:', upgrades.map(u => ({
+  //     id: u.id,
+  //     name: u.name,
+  //     level: u.level,
+  //     maxLevel: u.maxLevel,
+  //     effectValue: u.effectValue,
+  //     isAvailable: isUpgradeAvailable(u),
+  //     isMaxed: isUpgradeMaxed(u),
+  //     cost: getUpgradeCost(u)
+  //   })));
     
-    // Check for common loading issues
-    const issues = [];
-    if (upgrades.length === 0) issues.push('No upgrades loaded');
-    if (gameState.pointsPerSecond <= 1.0) issues.push('No upgrade effects applied to PPS');
-    if (gameState.offlineEfficiencyBonus <= 0) issues.push('No offline bonus upgrades detected');
+  //   // Check for common loading issues
+  //   const issues = [];
+  //   if (upgrades.length === 0) issues.push('No upgrades loaded');
+  //   if (gameState.pointsPerSecond <= 1.0) issues.push('No upgrade effects applied to PPS');
+  //   if (gameState.offlineEfficiencyBonus <= 0) issues.push('No offline bonus upgrades detected');
     
-    if (issues.length > 0) {
-      console.warn('⚠️ Potential loading issues detected:', issues);
-      showSystemNotification('Loading Issues Found', `Issues: ${issues.join(', ')}`, 'warning');
-    } else {
-      console.log('✅ All upgrade systems appear to be working correctly');
-      showSystemNotification('System Healthy', 'All upgrade systems working correctly', 'success');
-    }
+  //   if (issues.length > 0) {
+  //     console.warn('⚠️ Potential loading issues detected:', issues);
+  //     showSystemNotification('Loading Issues Found', `Issues: ${issues.join(', ')}`, 'warning');
+  //   } else {
+  //     console.log('✅ All upgrade systems appear to be working correctly');
+  //     showSystemNotification('System Healthy', 'All upgrade systems working correctly', 'success');
+  //   }
     
-    showSystemNotification('Debug Complete', 'Check console for upgrade system analysis', 'info');
-  }, [gameState, upgrades, getEnergyRegenerationRate, getEnergyEfficiencyBonus, getEnhancedMiningRate, isUpgradeAvailable, isUpgradeMaxed, getUpgradeCost, getFilteredUpgrades, showSystemNotification]);
+  //   showSystemNotification('Debug Complete', 'Check console for upgrade system analysis', 'info');
+  // }, [gameState, upgrades, getEnergyRegenerationRate, getEnergyEfficiencyBonus, getEnhancedMiningRate, isUpgradeAvailable, isUpgradeMaxed, getUpgradeCost, getFilteredUpgrades, showSystemNotification]);
 
   // Add keyboard shortcut for reset button visibility
   useEffect(() => {
@@ -4522,6 +4532,15 @@ export const DivineMiningGame: React.FC = () => {
 const isPPSUpgradeType = (upgradeId: string): boolean => {
   return !Object.values(UPGRADE_CATEGORIES).flat().includes(upgradeId);
 };
+
+  // if (!hasMinted) {
+  //   return (
+  //       <div className="p-4">
+  //           <h2 className="text-xl font-bold text-white text-center mb-4">Mint your NFT to start mining</h2>
+  //           <NFTMinter onMintSuccess={handleMintSuccess} onStatusChange={handleMintStatusChange} />
+  //       </div>
+  //   );
+  // }
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center space-y-4 overflow-y-auto game-scrollbar">
@@ -4982,7 +5001,7 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
         </div>
 
         {/* Hidden Reset Button - Only visible when holding Ctrl+Shift */}
-        <div className="relative z-10">
+        <div className="relative z-10 hidden">
           <button
             onClick={() => setShowResetConfirmation(true)}
             disabled={isResetting}
@@ -5065,8 +5084,15 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
                 <div>
-                  <h2 className="text-lg font-mono font-bold text-cyan-300 tracking-wider">🔧 TONERS MINING UPGRADES</h2>
+                  <h2 className="text-lg font-mono font-bold text-cyan-300 tracking-wider">🔧TONERS UPGRADES</h2>
                   <p className="text-xs font-mono text-cyan-400">Enhance your mining operation with advanced equipment</p>
+                  <button
+                    onClick={forceReloadUpgrades}
+                    className="mt-2 mb-2 px-3 py-1 rounded text-xs font-mono bg-blue-700/50 text-blue-300 border border-blue-600 hover:bg-blue-600/50 hover:text-blue-200 transition-all duration-300"
+                    title="Force reload upgrades from localStorage"
+                  >
+                    🔄 Refresh Upgrades
+                  </button>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -5277,7 +5303,7 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
 
               {/* Stats Summary */}
               <div className="mt-4 pt-3 border-t border-gray-600/30">
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                {/* <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                   <div className="text-center">
                     <div className="text-cyan-400 font-bold">TOTAL UPGRADES</div>
                     <div className="text-cyan-300">{gameState.upgradesPurchased}</div>
@@ -5286,8 +5312,8 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
                     <div className="text-purple-400 font-bold">AVAILABLE</div>
                     <div className="text-purple-300">{getFilteredUpgrades().filter(u => isUpgradeAvailable(u) && !isUpgradeMaxed(u)).length}</div>
                   </div>
-                </div>
-                <div className="mt-2 pt-2 border-t border-gray-600/20">
+                </div> */}
+                {/* <div className="mt-2 pt-2 border-t border-gray-600/20">
                   <div className="grid grid-cols-3 gap-2 text-xs font-mono">
                     <div className="text-center">
                       <div className="text-green-400 font-bold">PPS BONUS</div>
@@ -5302,10 +5328,10 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
                       <div className="text-yellow-300">+{(gameState.offlineEfficiencyBonus * 100).toFixed(1)}%</div>
                     </div>
                   </div>
-                </div>
+                </div> */}
                 {/* Debug Buttons */}
-                <div className="mt-3 pt-2 border-t border-gray-600/20 text-center space-y-2">
-                  <button
+                <div className="mt-3 pt-2 border-t border-gray-600/20 text-center space-y-4">
+                  {/* <button
                     onClick={testUpgradeEffects}
                     className="px-3 py-1 rounded text-xs font-mono bg-green-700/50 text-green-300 border border-green-600 hover:bg-green-600/50 hover:text-green-200 transition-all duration-300"
                     title="Test all upgrade effects and check console for detailed analysis"
@@ -5318,14 +5344,8 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
                     title="Debug upgrade system and check console for detailed analysis"
                   >
                     🔍 DEBUG UPGRADES
-                  </button>
-                  <button
-                    onClick={forceReloadUpgrades}
-                    className="px-3 py-1 rounded text-xs font-mono bg-blue-700/50 text-blue-300 border border-blue-600 hover:bg-blue-600/50 hover:text-blue-200 transition-all duration-300"
-                    title="Force reload upgrades from localStorage"
-                  >
-                    🔄 RELOAD UPGRADES
-                  </button>
+                  </button> */}
+                 
                 </div>
               </div>
             </div>

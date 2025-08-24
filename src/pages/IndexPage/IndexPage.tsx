@@ -21,6 +21,7 @@ import { BiHome } from 'react-icons/bi';
 import '@/utils/gemSyncTest';
 import DailyRewards from '@/components/DailyRewards';
 import SmartStore from '@/components/SmartStore';
+import { ShoutboxHeader } from '@/components/ShoutboxHeader/ShoutboxHeader';
 
 // Compact Auto-hide Wallet Connection Banner
 const WalletConnectionBanner: FC<{ NETWORK_NAME: string }> = ({ NETWORK_NAME }) => {
@@ -373,7 +374,7 @@ export const IndexPage: FC = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   
   // TON Network Configuration
-  const isMainnet = false; // You can toggle this for testing
+  const isMainnet = true; // You can toggle this for testing
   const NETWORK_NAME = isMainnet ? 'Mainnet' : 'Testnet';
   const MAINNET_API_KEY = 'ba0e3b7f5080add7ba9bc310b2652ce4d33654575152d5ab90fde863309f6118';
   const TESTNET_API_KEY = 'bb31868e5cf6529efb16bcf547beb3c534a28d1e139bd63356fd936c168fe662';
@@ -808,6 +809,7 @@ export const IndexPage: FC = () => {
     <ErrorBoundary>
       <GameProvider>
         <div className="w-full min-h-screen relative overflow-hidden">
+        <ShoutboxHeader />
           {/* Compact Network Warning */}
           {showNetworkWarning && (
             <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-gradient-to-r from-red-600/85 to-red-500/85 border-b border-red-400/30 text-white p-2 text-center font-bold text-xs animate-pulse shadow-[0_2px_12px_0_rgba(239,68,68,0.3)]">

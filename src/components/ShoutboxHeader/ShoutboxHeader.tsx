@@ -1,8 +1,8 @@
 import { FC, useState, useEffect, useRef } from 'react';
 
-export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({ onTabChange }) => {
+export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({}) => {
   const [shoutboxMessages] = useState([
-    { text: "CroakKingdom is coming soon! 🐸" }
+    { text: "Stakers Token Mining is live! 🎉 || Join the community to earn rewards! 🎉" }
   ]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -26,7 +26,7 @@ export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({ on
   }, [scrollSpeed, shoutboxMessages]);
 
   return (
-    <div className="relative top-0 left-0 right-0 z-50 bg-gradient-to-r from-green-600 to-yellow-600 overflow-hidden h-8">
+    <div className="relative top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-blue-600 overflow-hidden h-8">
       <div className="relative flex items-center h-full">
         {/* Scrolling messages */}
         <div className="flex-1 overflow-hidden"
@@ -43,7 +43,7 @@ export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({ on
                 className="flex items-center mx-4 text-sm text-white font-medium
                          hover:text-white/90 transition-colors duration-200"
               >
-                <span className="mr-2 text-yellow-300">•</span>
+                <span className="mr-2 text-white-300">•</span>
                 {message.text}
               </div>
             ))}
@@ -64,12 +64,12 @@ export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({ on
         {/* Fixed Participate button */}
         <div className="absolute right-1 top-1/2 -translate-y-1/2 z-10">
           <button 
-            className="px-3 py-0.5 text-xs bg-white text-green-600 rounded-2xl 
+            className="px-3 py-0.5 text-xs bg-white text-blue-600 rounded-2xl 
                      hover:bg-purple-100 transition-colors duration-200 font-semibold
                      shadow-md hover:shadow-lg"
-            onClick={() => onTabChange?.('tasks')}
+            onClick={() => window.open('https://t.me/Tonstak3it', '_blank')}
           >
-            Participate
+            Community
           </button>
         </div>
       </div>
