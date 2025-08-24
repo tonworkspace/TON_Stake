@@ -3,6 +3,7 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabaseClient';
 import { referralSystem, REFERRAL_CONFIG } from '../lib/referralSystem';
+import { UplineInfo } from '../types/referral';
 
 interface ReferralData {
   code: string;
@@ -56,6 +57,7 @@ interface ReferralUser {
   rank?: string;
   total_earned?: number;
   balance?: number;
+  direct_referrals?: number;
   // TONERS specific data
   tonersCoins?: number;
   totalTonersEarned?: number;
@@ -81,6 +83,7 @@ interface DatabaseReferral {
 
 export const useReferralIntegration = () => {
   const { user } = useAuth();
+  const [uplineData, setUplineData] = useState<UplineInfo[]>([]);
   const [referralCode, setReferralCode] = useState<string>('');
   const [referralData, setReferralData] = useState<ReferralData>({
     code: '',
@@ -338,7 +341,8 @@ export const useReferralIntegration = () => {
             created_at,
             login_streak,
             last_active,
-            mining_level
+            mining_level,
+            direct_referrals
           )
         `)
         .eq('referrer_id', user.id)
@@ -497,12 +501,61 @@ export const useReferralIntegration = () => {
           tonersCoins: tonersCoins,
           totalTonersEarned: totalTonersEarned,
           pointSource: pointSource,
-          gameData: gameData
+          gameData: gameData,
+          direct_referrals: (r.referred as any).direct_referrals || 0
         };
       }) || [];
 
       // Calculate level based on referrals
       const level = Math.floor(totalReferrals / 5) + 1;
+
+      // Fetch upline data
+      const { data: uplineResponse, error: uplineError } = await supabase
+        .from('users')
+        .select(`
+          id,
+          username,
+          rank,
+          total_earned,
+          created_at,
+          is_active,
+          referrer:users!referrer_id(
+            id,
+            username,
+            rank,
+            total_earned,
+            created_at,
+            is_active
+          )
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (uplineError) {
+        console.error('Error fetching upline data:', uplineError);
+      }
+
+      const uplineArray: UplineInfo[] = [];
+      if (uplineResponse?.referrer) {
+        const referrerData = uplineResponse.referrer as {
+          id: string | number;
+          username: string;
+          rank: string;
+          total_earned: number;
+          created_at: string;
+          is_active: boolean;
+        };
+        uplineArray.push({
+          id: referrerData.id.toString(),
+          username: referrerData.username,
+          rank: referrerData.rank || 'Novice',
+          totalEarned: referrerData.total_earned || 0,
+          joinedAt: new Date(referrerData.created_at).getTime(),
+          isActive: referrerData.is_active,
+          level: 1
+        });
+      }
+      setUplineData(uplineArray);
 
       setReferralData(prev => ({
         ...prev,
@@ -946,6 +999,7 @@ export const useReferralIntegration = () => {
     processReferralCodeManually,
     // STK reward functions
     processDailySTKRewards,
-    processLevel10Bonus
+    processLevel10Bonus,
+    uplineData
   };
 }; 
