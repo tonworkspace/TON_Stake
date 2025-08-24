@@ -536,15 +536,8 @@ export const useReferralIntegration = () => {
       }
 
       const uplineArray: UplineInfo[] = [];
-      if (uplineResponse?.referrer) {
-        const referrerData = uplineResponse.referrer as {
-          id: string | number;
-          username: string;
-          rank: string;
-          total_earned: number;
-          created_at: string;
-          is_active: boolean;
-        };
+      if (uplineResponse?.referrer && Array.isArray(uplineResponse.referrer) && uplineResponse.referrer.length > 0) {
+        const referrerData = uplineResponse.referrer[0];
         uplineArray.push({
           id: referrerData.id.toString(),
           username: referrerData.username,
