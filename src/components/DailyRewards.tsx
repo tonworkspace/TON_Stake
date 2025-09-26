@@ -2590,7 +2590,7 @@ const DailyRewards: React.FC = () => {
                 { id: 'overview', label: 'DASHBOARD', icon: '📊', color: 'from-green-500 to-emerald-500' },
                 { id: 'tiers', label: 'TIERS', icon: '🏆', color: 'from-yellow-500 to-orange-500' },
                 { id: 'stakes', label: 'PORTFOLIO', icon: '🔥', color: 'from-red-500 to-pink-500' },
-                { id: 'synergy', label: 'SYNERGY', icon: '⚡', color: 'from-purple-500 to-indigo-500' }
+                // { id: 'synergy', label: 'SYNERGY', icon: '⚡', color: 'from-purple-500 to-indigo-500' }
               ].map((tab) => (
                 <button
                   key={tab.id}

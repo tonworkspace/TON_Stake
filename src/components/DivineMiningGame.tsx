@@ -91,6 +91,22 @@ interface TutorialState {
   highlightElement: string | null;
 }
 
+// News System Interfaces
+interface NewsItem {
+  id: string;
+  title: string;
+  content: string;
+  category: 'update' | 'announcement' | 'event' | 'feature' | 'maintenance';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  publishedAt: string;
+  expiresAt?: string;
+  imageUrl?: string;
+  actionUrl?: string;
+  actionText?: string;
+  isRead: boolean;
+  tags?: string[];
+}
+
 // // Add missing interfaces
 // interface ClickEffect {
 //   x: number;
@@ -117,6 +133,36 @@ interface TutorialState {
 const GAME_VERSION = '1.1.0'; // Updated version
 // All keys will be made user-specific using getUserSpecificKey()
 const SAVE_KEY = 'tonersGame';
+
+// News System Data
+const NEWS_DATA: NewsItem[] = [
+  {
+    id: '1',
+    title: '🚀 Stakers Token TGE Announced!',
+    content: 'The official Token Generation Event (TGE) for Stakers Token (STK) will take place on September 30, 2025. This marks the launch of the ecosystem where liquidity, staking, and trading begin. Community fundraising runs from August 30 to September 15, followed by final preparations until TGE.',
+    category: 'announcement',
+    priority: 'high',
+    publishedAt: '2025-08-25T12:00:00Z',
+    expiresAt: '2025-10-01T00:00:00Z',
+    actionUrl: 'https://t.me/tonstakeit/757',
+    actionText: 'Open Forum',
+    isRead: false,
+    tags: ['tge', 'announcement', 'launch', 'community']
+  },
+  {
+    id: '2',
+    title: '🚀 Get Access to Phase 1 Portal',
+    content: 'The Old Portal serves as a performance record for all our Phase 1 pioneers, ensuring transparency as we transition into the new STK Mining Portal.',
+    category: 'announcement',
+    priority: 'high',
+    publishedAt: '2025-08-25T12:00:00Z',
+    expiresAt: '2025-10-01T00:00:00Z',
+    actionUrl: 'https://t.me/tonstakeitbot/portalone',
+    actionText: 'Open Portal',
+    isRead: false,
+    tags: ['tge', 'announcement', 'launch', 'community']
+  }
+];
 const BACKUP_KEY = 'tonersGame_backup';
 const DIVINE_POINTS_KEY = 'tonersPoints';
 const TOTAL_EARNED_KEY = 'tonersTotalEarned';
@@ -194,6 +240,92 @@ const getCurrentTier = (level: number) => {
   }
 };
 
+// News System Helper Functions
+const getNewsCategoryColor = (category: NewsItem['category']) => {
+  switch (category) {
+    case 'update':
+      return 'from-blue-600 to-cyan-600 text-blue-300 border-blue-500/50';
+    case 'announcement':
+      return 'from-purple-600 to-pink-600 text-purple-300 border-purple-500/50';
+    case 'event':
+      return 'from-green-600 to-emerald-600 text-green-300 border-green-500/50';
+    case 'feature':
+      return 'from-orange-600 to-yellow-600 text-orange-300 border-orange-500/50';
+    case 'maintenance':
+      return 'from-red-600 to-pink-600 text-red-300 border-red-500/50';
+    default:
+      return 'from-gray-600 to-gray-700 text-gray-300 border-gray-500/50';
+  }
+};
+
+const getNewsPriorityColor = (priority: NewsItem['priority']) => {
+  switch (priority) {
+    case 'critical':
+      return 'bg-red-500/20 border-red-500/50 text-red-300';
+    case 'high':
+      return 'bg-orange-500/20 border-orange-500/50 text-orange-300';
+    case 'medium':
+      return 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300';
+    case 'low':
+      return 'bg-blue-500/20 border-blue-500/50 text-blue-300';
+    default:
+      return 'bg-gray-500/20 border-gray-500/50 text-gray-300';
+  }
+};
+
+const getNewsCategoryIcon = (category: NewsItem['category']) => {
+  switch (category) {
+    case 'update':
+      return '🔄';
+    case 'announcement':
+      return '📢';
+    case 'event':
+      return '🎮';
+    case 'feature':
+      return '✨';
+    case 'maintenance':
+      return '🔧';
+    default:
+      return '📰';
+  }
+};
+
+const formatNewsDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+  
+  if (diffInHours < 1) {
+    return 'Just now';
+  } else if (diffInHours < 24) {
+    return `${diffInHours}h ago`;
+  } else if (diffInHours < 48) {
+    return 'Yesterday';
+  } else {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+};
+
+const getActiveNews = () => {
+  const now = new Date();
+  return NEWS_DATA.filter(news => {
+    // Check if news has expired
+    if (news.expiresAt && new Date(news.expiresAt) < now) {
+      return false;
+    }
+    return true;
+  });
+};
+
+const getUnreadNewsCount = () => {
+  return getActiveNews().filter(news => !news.isRead).length;
+};
+
 // Add CardHeader component outside the main component
 // const CardHeader: React.FC<CardHeaderProps> = ({ 
 //   title, 
@@ -229,7 +361,7 @@ const getCurrentTier = (level: number) => {
 // );
 
 
-export const DivineMiningGame: React.FC = () => {
+export const DivineMiningGame: React.FC<{ setCurrentTab?: (tab: string) => void }> = ({ setCurrentTab }) => {
   const { setPoints, activeBoosts, gems } = useGameContext();
   const { user } = useAuth();
   const {
@@ -267,7 +399,11 @@ export const DivineMiningGame: React.FC = () => {
   const [showResetButton, setShowResetButton] = useState(false);
   
   // Add tier info modal state
-  const [showTierInfo, setShowTierInfo] = useState(false);
+const [showTierInfo, setShowTierInfo] = useState(false);
+
+// Add news modal state
+const [showNewsModal, setShowNewsModal] = useState(false);
+// const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   
   // Upgrade filtering state
   const [upgradeFilter, setUpgradeFilter] = useState<'all' | 'affordable' | 'recommended' | 'hardware' | 'advanced' | 'software' | 'network' | 'infrastructure'>('all');
@@ -3775,6 +3911,15 @@ export const DivineMiningGame: React.FC = () => {
         setIsLoading(false);
         setLoadingMessage('');
         console.log('✅ Initial data load completed');
+        
+        // Show notification about new Telegram post
+        setTimeout(() => {
+          showSystemNotification(
+            '📢 New Community Update!', 
+            'Check out our latest post on Telegram for important updates and announcements!', 
+            'info'
+          );
+        }, 2000); // Show after 2 seconds to let the game settle
       }).catch((error) => {
         console.error('❌ Error during initial load:', error);
         setIsLoading(false);
@@ -4463,6 +4608,11 @@ export const DivineMiningGame: React.FC = () => {
       if (event.key === 'Escape' && showUpgradeShop) {
         closeUpgradeShop();
       }
+      
+      // Close news modal with Escape key
+      if (event.key === 'Escape' && showNewsModal) {
+        setShowNewsModal(false);
+      }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -4478,7 +4628,7 @@ export const DivineMiningGame: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [showUpgradeShop, closeUpgradeShop]);
+  }, [showUpgradeShop, showNewsModal, closeUpgradeShop]);
 
   // Add upgrade categorization system after the interfaces
   const UPGRADE_CATEGORIES = {
@@ -4639,6 +4789,64 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
               </span>
             )}
           </div>
+        {/* New Button: "Buy More STK" */}
+        <div className="mt-3 flex justify-center space-x-3">
+          {/* <button
+            onClick={() => setShowUpgradeShop(true)}
+            className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-pink-600 to-blue-600 text-white font-mono font-bold text-sm border border-pink-400/40 shadow-lg hover:from-pink-500 hover:to-blue-500 hover:scale-105 active:scale-95 transition-all duration-200"
+            title="Buy more STK tokens to boost your mining"
+          >
+            <svg
+              className="w-5 h-5 mr-2 text-yellow-300"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 3v18m9-9H3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Buy More STK
+          </button> */}
+          
+          <button
+            onClick={() => setShowNewsModal(true)}
+            className="relative inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-mono font-bold text-sm border border-purple-400/40 shadow-lg hover:from-purple-500 hover:to-indigo-500 hover:scale-105 active:scale-95 transition-all duration-200"
+            title="Check latest news and updates"
+          >
+            <svg
+              className="w-5 h-5 mr-2 text-yellow-300"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            News
+            {getUnreadNewsCount() > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                {getUnreadNewsCount()}
+              </span>
+            )}
+          </button>
+          
+          <button
+            onClick={() => setCurrentTab && setCurrentTab('store')}
+            className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-mono font-bold text-sm border border-blue-400/40 shadow-lg hover:from-blue-500 hover:to-cyan-500 hover:scale-105 active:scale-95 transition-all duration-200"
+            title="Navigate to Store"
+          >
+            <svg
+              className="w-5 h-5 mr-2 text-yellow-300"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Buy Vouchers
+          </button>
+        </div>
         </div>
 
         {/* Professional Mining Control Panel */}
@@ -5585,6 +5793,166 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* News Modal */}
+      {showNewsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={(e) => {
+          // Close modal when clicking outside
+          if (e.target === e.currentTarget) {
+            setShowNewsModal(false);
+          }
+        }}>
+          <div className="relative w-full max-w-2xl max-h-[80vh] bg-gradient-to-br from-gray-900/95 to-black/95 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-[0_0_40px_rgba(147,51,234,0.3)] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-3 border-b border-purple-500/20 bg-gradient-to-r from-purple-900/20 to-indigo-900/20">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></div>
+                <div>
+                  <h2 className="text-lg font-mono font-bold text-purple-300 tracking-wider">📰 LATEST NEWS</h2>
+                  <p className="text-xs font-mono text-purple-400">Stay updated with Divine Mining</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowNewsModal(false)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg bg-red-900/50 text-red-400 border border-red-500/30 hover:bg-red-800/50 hover:border-red-400/50 transition-all duration-300 hover:scale-110"
+                title="Close news"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 overflow-y-auto max-h-[calc(80vh-80px)]">
+              {getActiveNews().length > 0 ? (
+                <div className="space-y-4">
+                  {getActiveNews().map((news) => (
+                    <div
+                      key={news.id}
+                      className={`relative bg-gradient-to-r backdrop-blur-sm border rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] ${
+                        news.isRead 
+                          ? 'border-gray-600/50 bg-gradient-to-r from-gray-800/40 to-gray-900/40 opacity-70' 
+                          : `border-${getNewsCategoryColor(news.category).split('-')[1]}-500/50 bg-gradient-to-r from-gray-800/40 to-gray-900/40`
+                      }`}
+                      onClick={() => {
+                        // Mark as read
+                        news.isRead = true;
+                        setShowNewsModal(false);
+                        showSystemNotification('News Read', 'News marked as read', 'info');
+                      }}
+                    >
+                      {/* Unread indicator */}
+                      {!news.isRead && (
+                        <div className="absolute top-2 right-2 w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                      )}
+
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg">{getNewsCategoryIcon(news.category)}</span>
+                          <div>
+                            <h3 className="text-sm font-mono font-bold text-gray-200 tracking-wider">
+                              {news.title}
+                            </h3>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <span className={`text-xs font-mono px-2 py-1 rounded-full border ${getNewsCategoryColor(news.category)}`}>
+                                {news.category.toUpperCase()}
+                              </span>
+                              <span className={`text-xs font-mono px-2 py-1 rounded-full border ${getNewsPriorityColor(news.priority)}`}>
+                                {news.priority.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs font-mono text-gray-400">
+                          {formatNewsDate(news.publishedAt)}
+                        </span>
+                      </div>
+
+                      {/* Content */}
+                      <div className="mb-3">
+                        <p className="text-sm font-mono text-gray-300 leading-relaxed">
+                          {news.content}
+                        </p>
+                      </div>
+
+                      {/* Tags */}
+                      {news.tags && news.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {news.tags.map((tag, tagIndex) => (
+                            <span
+                              key={tagIndex}
+                              className="text-xs font-mono px-2 py-1 rounded-full bg-gray-700/50 text-gray-300 border border-gray-600/30"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Action Button */}
+                      {news.actionUrl && news.actionText && (
+                        <div className="flex justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Handle action URL
+                              if (news.actionUrl?.startsWith('#')) {
+                                // Internal action
+                                showSystemNotification('Action', `Action: ${news.actionText}`, 'info');
+                              } else {
+                                // External URL
+                                window.open(news.actionUrl, '_blank');
+                              }
+                            }}
+                            className="px-3 py-1 rounded text-xs font-mono bg-purple-700/50 text-purple-300 border border-purple-600 hover:bg-purple-600/50 hover:text-purple-200 transition-all duration-300"
+                          >
+                            {news.actionText}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Expiry notice */}
+                      {/* {news.expiresAt && (
+                        <div className="mt-2 text-xs font-mono text-orange-400 bg-orange-900/20 border border-orange-500/30 rounded p-2">
+                          ⏰ Expires: {formatNewsDate(news.expiresAt)}
+                        </div>
+                      )} */}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">📰</div>
+                  <h3 className="text-lg font-mono font-bold text-gray-300 mb-2">No News Available</h3>
+                  <p className="text-sm font-mono text-gray-400">
+                    Check back later for updates and announcements!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-3 border-t border-purple-500/20 bg-gradient-to-r from-purple-900/10 to-indigo-900/10">
+              <div className="text-xs font-mono text-purple-400">
+                {getActiveNews().length} news items • {getUnreadNewsCount()} unread
+              </div>
+              <button
+                onClick={() => {
+                  // Mark all as read
+                  getActiveNews().forEach(news => news.isRead = true);
+                  setShowNewsModal(false);
+                  showSystemNotification('All News Read', 'All news marked as read', 'success');
+                }}
+                className="px-3 py-1 rounded text-xs font-mono bg-gray-700/50 text-gray-300 border border-gray-600 hover:bg-gray-600/50 hover:text-gray-200 transition-all duration-300"
+              >
+                Mark All Read
+              </button>
             </div>
           </div>
         </div>

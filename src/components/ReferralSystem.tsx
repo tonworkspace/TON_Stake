@@ -3,8 +3,7 @@ import { GiPerson } from 'react-icons/gi';
 import { BiLink } from 'react-icons/bi';
 import { useAuth } from '@/hooks/useAuth';
 import { useReferralIntegration } from '@/hooks/useReferralIntegration';
-import { supabase } from '@/lib/supabaseClient';
-import { UplineInfo, DownlineInfo } from '../types/referral';
+import { DownlineInfo } from '../types/referral';
 import { NetworkTab, ShareTab } from './tabs';
 import './ReferralSystem.css';
 
@@ -79,65 +78,37 @@ const NavigationTabs: React.FC<NavigationTabsProps> = ({ activeTab, setActiveTab
   );
 };
 
-interface ReferrerData {
-  id: string | number;
-  username: string;
-  rank: string;
-  total_earned: number;
-  created_at: string;
-  is_active: boolean;
-  referrer_id: string | null;
-}
-
-interface SupabaseResponse {
-  data: {
-    id: string;
-    username: string;
-    rank: string;
-    total_earned: number;
-    created_at: string;
-    is_active: boolean;
-    referrer_id: string | null;
-    referrer: ReferrerData;
-  } | null;
-  error: any;
-}
-
-interface ReferralResponse {
-  data: Array<{
-    referred: {
-      id: string | number;
-      username: string;
-      rank: string;
-      total_earned: number;
-      created_at: string;
-      is_active: boolean;
-      direct_referrals: number;
-    };
-  }> | null;
-  error: any;
-}
-
 export const ReferralSystem: React.FC = () => {
   const { user } = useAuth();
   const { 
     referralData,
-    loadReferralData
+    loadReferralData,
+    uplineData,
+    debugInfo,
+    forceRefreshReferralData
   } = useReferralIntegration();
   
   const [activeTab, setActiveTab] = useState('share');
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  
-  const [uplineData, setUplineData] = useState<UplineInfo[]>([]);
-  const [downlineData, setDownlineData] = useState<DownlineInfo[]>([]);
-  const [networkStats, setNetworkStats] = useState({
-    totalNetworkSize: 0,
-    totalNetworkEarnings: 0,
-    networkLevels: 0,
-    yourPosition: 0
-  });
+  const [debugMode, setDebugMode] = useState(false);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 ReferralSystem Debug Info:', {
+      user: user?.id,
+      referralData: {
+        code: referralData.code,
+        totalReferrals: referralData.totalReferrals,
+        activeReferrals: referralData.activeReferrals,
+        referralsLength: referralData.referrals?.length || 0,
+        referrals: referralData.referrals
+      },
+      uplineData: uplineData,
+      debugInfo: debugInfo
+    });
+  }, [user?.id, referralData, uplineData, debugInfo]);
 
   // Load data
   useEffect(() => {
@@ -147,10 +118,14 @@ export const ReferralSystem: React.FC = () => {
       if (!user?.id || !mounted) return;
       
       try {
+        console.log('🔄 Loading referral data for user:', user.id);
         await loadReferralData();
-        if (mounted) setDataLoaded(true);
+        if (mounted) {
+          setDataLoaded(true);
+          console.log('✅ Referral data loaded successfully');
+        }
       } catch (error) {
-        console.error('Error loading referral data:', error);
+        console.error('❌ Error loading referral data:', error);
         if (mounted) setDataLoaded(true);
       }
     };
@@ -159,98 +134,24 @@ export const ReferralSystem: React.FC = () => {
     return () => { mounted = false; };
   }, [user?.id, loadReferralData]);
 
-  // Load network data
-  useEffect(() => {
-    if (dataLoaded && user?.id) {
-      loadNetworkData();
-    }
-  }, [user?.id, dataLoaded]);
+  // Computed properties from hook data
+  const downlineData: DownlineInfo[] = (referralData.referrals || []).map(r => ({
+    id: r.id,
+    username: r.username,
+    rank: r.rank || 'Novice',
+    totalEarned: r.total_earned || 0,
+    joinedAt: r.joinedAt,
+    isActive: r.isActive,
+    level: 1, // Note: Level is not deeply tracked in this implementation
+    directReferrals: r.direct_referrals || 0,
+  }));
 
-  const loadNetworkData = useCallback(async () => {
-    if (!user?.id) return;
-
-    try {
-      // Load upline data
-      const uplineResponse: SupabaseResponse = await supabase
-        .from('users')
-        .select(`
-          id,
-          username,
-          rank,
-          total_earned,
-          created_at,
-          is_active,
-          referrer_id,
-          referrer:users!referrer_id(
-            id,
-            username,
-            rank,
-            total_earned,
-            created_at,
-            is_active,
-            referrer_id
-          )
-        `)
-        .eq('id', user.id)
-        .single();
-
-      let uplineArray: UplineInfo[] = [];
-      if (uplineResponse.data?.referrer_id) {
-        const referrerData = uplineResponse.data.referrer;
-        uplineArray.push({
-          id: referrerData.id.toString(),
-          username: referrerData.username,
-          rank: referrerData.rank || 'Novice',
-          totalEarned: referrerData.total_earned || 0,
-          joinedAt: new Date(referrerData.created_at).getTime(),
-          isActive: referrerData.is_active,
-          level: 1
-        });
-      }
-
-      // Load downline data
-      const downlineResponse: ReferralResponse = await supabase
-        .from('referrals')
-        .select(`
-          *,
-          referred:users!referred_id(
-            id,
-            username,
-            rank,
-            total_earned,
-            created_at,
-            is_active,
-            direct_referrals
-          )
-        `)
-        .eq('referrer_id', user.id);
-
-      // Process downline data
-      const downlineArray: DownlineInfo[] = downlineResponse.data?.map(ref => ({
-        id: ref.referred.id.toString(),
-        username: ref.referred.username,
-        rank: ref.referred.rank || 'Novice',
-        totalEarned: ref.referred.total_earned || 0,
-        joinedAt: new Date(ref.referred.created_at).getTime(),
-        isActive: ref.referred.is_active,
-        level: 1,
-        directReferrals: ref.referred.direct_referrals || 0
-      })) || [];
-
-      // Update states
-      setUplineData(uplineArray);
-      setDownlineData(downlineArray);
-      setNetworkStats({
-        totalNetworkSize: downlineArray.length,
-        totalNetworkEarnings: downlineArray.reduce((sum, m) => sum + m.totalEarned, 0),
-        networkLevels: Math.max(...downlineArray.map(m => m.level), 0),
-        yourPosition: uplineArray.length + 1
-      });
-
-    } catch (error) {
-      console.error('Error loading network data:', error);
-    }
-  }, [user?.id]);
+  const networkStats = {
+    totalNetworkSize: downlineData.length,
+    totalNetworkEarnings: downlineData.reduce((sum, m) => sum + m.totalEarned, 0),
+    networkLevels: downlineData.length > 0 ? 1 : 0,
+    yourPosition: uplineData.length + 1,
+  };
 
   const copyReferralCode = useCallback(async () => {
     const referralLink = `https://t.me/Tonstak3it_bot/start?startapp=${referralData.code}`;
@@ -279,6 +180,11 @@ export const ReferralSystem: React.FC = () => {
     }
   }, [referralData.code]);
 
+  const handleRefreshData = useCallback(async () => {
+    console.log('🔄 Manual refresh triggered');
+    await forceRefreshReferralData();
+  }, [forceRefreshReferralData]);
+
   // Render loading state
   if (!dataLoaded) {
     return (
@@ -292,6 +198,28 @@ export const ReferralSystem: React.FC = () => {
 
   return (
     <div className="flex-1 p-2 space-y-2 overflow-y-auto game-scrollbar">
+      {/* Debug Panel */}
+      {debugMode && (
+        <div className="bg-red-900/40 backdrop-blur-xl border border-red-500/30 rounded-xl p-3 text-xs">
+          <div className="text-red-300 font-bold mb-2">🔧 Debug Mode</div>
+          <div className="space-y-1 text-red-200">
+            <div>User ID: {user?.id}</div>
+            <div>Referral Code: {referralData.code || 'None'}</div>
+            <div>Total Referrals: {referralData.totalReferrals}</div>
+            <div>Active Referrals: {referralData.activeReferrals}</div>
+            <div>Downline Data Length: {downlineData.length}</div>
+            <div>Upline Data Length: {uplineData.length}</div>
+            <div>Debug Info: {JSON.stringify(debugInfo, null, 2)}</div>
+          </div>
+          <button
+            onClick={handleRefreshData}
+            className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-xs"
+          >
+            🔄 Refresh Data
+          </button>
+        </div>
+      )}
+
       <ReferralHeader networkStats={networkStats} />
       <NavigationTabs 
         activeTab={activeTab} 
@@ -317,6 +245,15 @@ export const ReferralSystem: React.FC = () => {
           setShowQR={setShowQR}
         />
       )}
+
+      {/* Debug Toggle */}
+      <button
+        onClick={() => setDebugMode(!debugMode)}
+        className="fixed bottom-4 right-4 bg-gray-800 text-white p-2 rounded-full text-xs"
+        title="Toggle Debug Mode"
+      >
+        🔧
+      </button>
     </div>
   );
 };

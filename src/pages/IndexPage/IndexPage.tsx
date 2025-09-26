@@ -12,7 +12,6 @@ import { GameProvider, useGameContext } from '@/contexts/GameContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { 
   GiCrystalBall, 
-  GiSpellBook,
   GiShop,
   GiDiamonds
 } from 'react-icons/gi';
@@ -364,7 +363,7 @@ export const IndexPage: FC = () => {
   // Skip loading if user is already authenticated
   const shouldShowLoading = isLoading && !user;
   const { theme } = useTheme();
-  const [currentTab, setCurrentTab] = useState('zodiac');
+  const [currentTab, setCurrentTab] = useState('daily');
   const [showNetworkWarning, setShowNetworkWarning] = useState(false);
   
   // TON Wallet State
@@ -924,7 +923,7 @@ export const IndexPage: FC = () => {
               )}
 
               {/* Content Sections */}
-              {currentTab === 'zodiac' && <DivineMiningGame />}
+              {currentTab === 'zodiac' && <DivineMiningGame setCurrentTab={setCurrentTab} />}
               {currentTab === 'daily' && <DailyRewards />}
               {currentTab === 'divine' && <DivinePointsLeaderboard />}
               {currentTab === 'store' && <SmartStore />}
@@ -949,14 +948,14 @@ export const IndexPage: FC = () => {
               <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/1 via-transparent to-transparent animate-pulse" style={{ animationDuration: '8s' }}></div>
               
               <div className="max-w-lg mx-auto px-3 py-3 relative">
-                <div className="grid grid-cols-5 items-center gap-2">
+                <div className="grid grid-cols-4 items-center gap-2">
                   {[
-                    { id: 'zodiac', text: 'Mine', Icon: BiHome, colors: ['from-cyan-500', 'to-blue-600', 'cyan'] },
-                    { id: 'daily', text: 'Rewards', Icon: GiCrystalBall, colors: ['from-purple-500', 'to-pink-600', 'purple'] },
-                    { id: 'divine', text: 'Leaderboard', Icon: GiDiamonds, colors: ['from-yellow-500', 'to-orange-600', 'yellow'] },
+                    { id: 'daily', text: 'Stake', Icon: BiHome, colors: ['from-purple-500', 'to-pink-600', 'purple'] },
+                    { id: 'zodiac', text: 'Mine', Icon: GiCrystalBall, colors: ['from-cyan-500', 'to-blue-600', 'cyan'] },
+                    { id: 'divine', text: 'Ranks', Icon: GiDiamonds, colors: ['from-yellow-500', 'to-orange-600', 'yellow'] },
                     { id: 'store', text: 'Store', Icon: GiShop, colors: ['from-cyan-500', 'to-blue-600', 'cyan'] },
                     // { id: 'crystals', text: 'Tasks', Icon: GiCrystalCluster, colors: ['from-emerald-500', 'to-green-600', 'emerald'] },
-                    { id: 'spells', text: 'Referrals', Icon: GiSpellBook, colors: ['from-pink-500', 'to-rose-600', 'pink'] },
+                    // { id: 'spells', text: 'Referrals', Icon: GiSpellBook, colors: ['from-pink-500', 'to-rose-600', 'pink'] },
                   ].map(({ id, text, Icon, colors }) => {
                     const isActive = currentTab === id;
                     const [fromColor, toColor, baseColor] = colors;

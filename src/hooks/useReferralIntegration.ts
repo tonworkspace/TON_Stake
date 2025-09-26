@@ -3,6 +3,7 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabaseClient';
 import { referralSystem, REFERRAL_CONFIG } from '../lib/referralSystem';
+import { UplineInfo } from '../types/referral';
 
 interface ReferralData {
   code: string;
@@ -56,6 +57,7 @@ interface ReferralUser {
   rank?: string;
   total_earned?: number;
   balance?: number;
+  direct_referrals?: number;
   // TONERS specific data
   tonersCoins?: number;
   totalTonersEarned?: number;
@@ -81,6 +83,7 @@ interface DatabaseReferral {
 
 export const useReferralIntegration = () => {
   const { user } = useAuth();
+  const [uplineData, setUplineData] = useState<UplineInfo[]>([]);
   const [referralCode, setReferralCode] = useState<string>('');
   const [referralData, setReferralData] = useState<ReferralData>({
     code: '',
@@ -338,7 +341,8 @@ export const useReferralIntegration = () => {
             created_at,
             login_streak,
             last_active,
-            mining_level
+            mining_level,
+            direct_referrals
           )
         `)
         .eq('referrer_id', user.id)
@@ -352,7 +356,7 @@ export const useReferralIntegration = () => {
       // Get STK earnings data
       const { data: stkEarnings } = await supabase
         .from('sbt_history')
-        .select('amount, type, metadata')
+        .select('amount, type, timestamp')
         .eq('user_id', user.id);
 
       // Calculate STK rewards
@@ -365,7 +369,7 @@ export const useReferralIntegration = () => {
         r.referred?.mining_level === 10 && 
         !stkEarnings?.some(e => 
           e.type === 'level_10_bonus' && 
-          e.metadata?.referral_id === r.referred.id
+          e.timestamp && new Date(e.timestamp).getTime() > new Date(r.created_at).getTime()
         )
       ).length || 0;
       
@@ -497,12 +501,54 @@ export const useReferralIntegration = () => {
           tonersCoins: tonersCoins,
           totalTonersEarned: totalTonersEarned,
           pointSource: pointSource,
-          gameData: gameData
+          gameData: gameData,
+          direct_referrals: (r.referred as any).direct_referrals || 0
         };
       }) || [];
 
       // Calculate level based on referrals
       const level = Math.floor(totalReferrals / 5) + 1;
+
+      // Fetch upline data
+      const { data: uplineResponse, error: uplineError } = await supabase
+        .from('users')
+        .select(`
+          id,
+          username,
+          rank,
+          total_earned,
+          created_at,
+          is_active,
+          referrer:users!referrer_id(
+            id,
+            username,
+            rank,
+            total_earned,
+            created_at,
+            is_active
+          )
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (uplineError) {
+        console.error('Error fetching upline data:', uplineError);
+      }
+
+      const uplineArray: UplineInfo[] = [];
+      if (uplineResponse?.referrer && Array.isArray(uplineResponse.referrer) && uplineResponse.referrer.length > 0) {
+        const referrerData = uplineResponse.referrer[0];
+        uplineArray.push({
+          id: referrerData.id.toString(),
+          username: referrerData.username,
+          rank: referrerData.rank || 'Novice',
+          totalEarned: referrerData.total_earned || 0,
+          joinedAt: new Date(referrerData.created_at).getTime(),
+          isActive: referrerData.is_active,
+          level: 1
+        });
+      }
+      setUplineData(uplineArray);
 
       setReferralData(prev => ({
         ...prev,
@@ -607,15 +653,20 @@ export const useReferralIntegration = () => {
         return;
       }
 
-      const { data: success, error: rpcError } = await supabase.rpc('create_referral', {
+      const { data: result, error: rpcError } = await supabase.rpc('create_referral_enhanced', {
         p_referrer_id: referrerId,
-        p_referred_id: user.id
+        p_referred_id: user.id,
+        p_referral_code: startParam,
+        p_ip_address: null, // Could be passed from frontend if needed
+        p_user_agent: navigator.userAgent
       });
 
-      if (rpcError || !success) {
-        console.error('Error creating referral via RPC:', rpcError);
-        await trackReferralAttempt(startParam, 'duplicate', 'Referral already exists or failed');
-        setDebugInfo(prev => ({ ...prev, error: 'Referral already exists or failed', processed: true }));
+      if (rpcError || !result?.success) {
+        console.error('Error creating referral via RPC:', rpcError, result);
+        const errorCode = result?.code || 'unknown';
+        const errorMessage = result?.error || 'Referral creation failed';
+        await trackReferralAttempt(startParam, errorCode === 'DUPLICATE_REFERRAL' ? 'duplicate' : 'failed', errorMessage);
+        setDebugInfo(prev => ({ ...prev, error: errorMessage, processed: true }));
         return;
       }
       
@@ -867,6 +918,35 @@ export const useReferralIntegration = () => {
     await loadReferralData();
   }, [loadReferralData]);
 
+  // Check referral status before processing
+  const checkReferralStatus = useCallback(async (referrerId: number, referredId: number) => {
+    if (!referrerId || !referredId) return { canRefer: false, reason: 'Invalid user IDs' };
+    
+    try {
+      const { data: status, error } = await supabase.rpc('check_referral_status', {
+        p_referrer_id: referrerId,
+        p_referred_id: referredId
+      });
+
+      if (error) {
+        console.error('Error checking referral status:', error);
+        return { canRefer: false, reason: 'Error checking status' };
+      }
+
+      return {
+        canRefer: status?.can_refer || false,
+        reason: status?.can_refer ? 'Can refer' : 'Cannot refer',
+        referralExists: status?.referral_exists || false,
+        userHasReferrer: status?.user_has_referrer || false,
+        referrerUsername: status?.referrer_username,
+        referredUsername: status?.referred_username
+      };
+    } catch (error) {
+      console.error('Error checking referral status:', error);
+      return { canRefer: false, reason: 'Error checking status' };
+    }
+  }, []);
+
   // Process referral code manually (for the ReferralPrompt)
   const processReferralCodeManually = useCallback(async (referralCode: string) => {
     if (!user?.id) return { success: false, error: 'User not authenticated' };
@@ -899,15 +979,20 @@ export const useReferralIntegration = () => {
         return { success: false, error: 'Referrer not found' };
       }
       
-      const { data: success, error: rpcError } = await supabase.rpc('create_referral', {
+      const { data: result, error: rpcError } = await supabase.rpc('create_referral_enhanced', {
         p_referrer_id: referrerId,
-        p_referred_id: user.id
+        p_referred_id: user.id,
+        p_referral_code: referralCode,
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent
       });
 
-      if (rpcError || !success) {
-        console.error('Error creating referral via RPC:', rpcError);
-        await trackReferralAttempt(referralCode, 'duplicate', 'Referral already exists or failed');
-        return { success: false, error: 'Referral already exists or failed' };
+      if (rpcError || !result?.success) {
+        console.error('Error creating referral via RPC:', rpcError, result);
+        const errorCode = result?.code || 'unknown';
+        const errorMessage = result?.error || 'Referral creation failed';
+        await trackReferralAttempt(referralCode, errorCode === 'DUPLICATE_REFERRAL' ? 'duplicate' : 'failed', errorMessage);
+        return { success: false, error: errorMessage };
       }
       
       // Track the successful attempt
@@ -944,8 +1029,10 @@ export const useReferralIntegration = () => {
     loadReferralAttempts,
     forceRefreshReferralData,
     processReferralCodeManually,
+    checkReferralStatus,
     // STK reward functions
     processDailySTKRewards,
-    processLevel10Bonus
+    processLevel10Bonus,
+    uplineData
   };
 }; 

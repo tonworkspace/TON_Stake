@@ -1,8 +1,15 @@
 import { FC, useState, useEffect, useRef } from 'react';
 
+interface ShoutboxMessage {
+  text: string;
+  isClickable?: boolean;
+  url?: string;
+}
+
 export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({}) => {
-  const [shoutboxMessages] = useState([
-    { text: "Stakers Token Mining is live! 🎉 || Join the community to earn rewards! 🎉" }
+  const [shoutboxMessages] = useState<ShoutboxMessage[]>([
+    { text: "Stakers Token Mining is live! 🎉 || Join the community to earn rewards! 🎉" },
+    { text: "📢 Latest Community Update Available! Click to view the newest post! 🚀", isClickable: true, url: 'https://t.me/tonstakeit/754' }
   ]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -40,8 +47,16 @@ export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({}) 
             {shoutboxMessages.map((message, index) => (
               <div 
                 key={index}
-                className="flex items-center mx-4 text-sm text-white font-medium
-                         hover:text-white/90 transition-colors duration-200"
+                className={`flex items-center mx-4 text-sm font-medium transition-colors duration-200 ${
+                  message.isClickable 
+                    ? 'text-yellow-300 hover:text-yellow-200 cursor-pointer underline' 
+                    : 'text-white hover:text-white/90'
+                }`}
+                onClick={() => {
+                  if (message.isClickable && message.url) {
+                    window.open(message.url, '_blank');
+                  }
+                }}
               >
                 <span className="mr-2 text-white-300">•</span>
                 {message.text}
@@ -51,8 +66,16 @@ export const ShoutboxHeader: FC<{ onTabChange?: (tab: string) => void }> = ({}) 
             {shoutboxMessages.map((message, index) => (
               <div 
                 key={`repeat-${index}`}
-                className="flex items-center mx-4 text-sm text-white font-medium
-                         hover:text-white/90 transition-colors duration-200"
+                className={`flex items-center mx-4 text-sm font-medium transition-colors duration-200 ${
+                  message.isClickable 
+                    ? 'text-yellow-300 hover:text-yellow-200 cursor-pointer underline' 
+                    : 'text-white hover:text-white/90'
+                }`}
+                onClick={() => {
+                  if (message.isClickable && message.url) {
+                    window.open(message.url, '_blank');
+                  }
+                }}
               >
                 <span className="mr-2 text-yellow-300">•</span>
                 {message.text}

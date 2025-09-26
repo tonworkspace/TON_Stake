@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GiCrown, GiTrophy, GiMedal, GiLightningArc, GiDiamonds } from 'react-icons/gi';
-import { BiTime, BiTrendingUp, BiStar, BiRefresh, BiChevronUp } from 'react-icons/bi';
+import { BiTrendingUp, BiStar, BiRefresh, BiChevronUp } from 'react-icons/bi';
 import { FaCrown } from 'react-icons/fa';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -120,7 +120,7 @@ export const DivinePointsLeaderboard: React.FC = () => {
     return `${baseKey}_${user.telegram_id}`;
   }, [user?.telegram_id]);
 
-  const [currentTab, setCurrentTab] = useState<'all_time' | 'daily' | 'weekly' | 'monthly'>('all_time');
+  const [currentTab, setCurrentTab] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlyTop10] = useState(false);
   const [showOnlyActive] = useState(false);
@@ -280,9 +280,6 @@ export const DivinePointsLeaderboard: React.FC = () => {
     let data: DivinePlayer[] = [];
     
     switch (currentTab) {
-      case 'all_time': 
-        data = leaderboardData.topPlayers;
-        break;
       case 'daily': 
         data = leaderboardData.dailyWinners;
         break;
@@ -293,7 +290,7 @@ export const DivinePointsLeaderboard: React.FC = () => {
         data = leaderboardData.monthlyWinners;
         break;
       default: 
-        data = leaderboardData.topPlayers;
+        data = leaderboardData.dailyWinners;
     }
 
     // Apply search filter
@@ -467,14 +464,13 @@ export const DivinePointsLeaderboard: React.FC = () => {
           {/* Period Tabs */}
           <div className="flex gap-1 flex-1">
             {[
-              { key: 'all_time', label: 'All', icon: <FaCrown className="w-3 h-3" /> },
-              { key: 'daily', label: '24H', icon: <BiTime className="w-3 h-3" /> },
+              { key: 'daily', label: 'All', icon: <FaCrown className="w-3 h-3" /> },
               { key: 'weekly', label: '7D', icon: <BiTrendingUp className="w-3 h-3" /> },
               { key: 'monthly', label: '30D', icon: <BiStar className="w-3 h-3" /> }
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setCurrentTab(tab.key as any)}
+                onClick={() => setCurrentTab(tab.key as 'daily' | 'weekly' | 'monthly')}
                 className={`flex items-center justify-center gap-1 py-1 px-2 rounded text-xs font-mono transition-all duration-300 ${
                   currentTab === tab.key
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'

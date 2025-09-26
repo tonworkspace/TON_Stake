@@ -136,28 +136,65 @@ const SmartStore = () => {
   const [tokenOfferings] = useState<TokenOffering[]>([
     {
       id: 1,
-      tierName: "Private Sale Tier 1",
-      description: "First public-facing private sale round with a capped price.",
+      tierName: "Seed Voucher",
+      description: "Exclusive entry point for the earliest believers. The lowest token price, limited supply, and maximum upside.",
       totalTokens: 10000000,
       pricePerToken: 0.0025,
-      minPurchaseAmount: 25,
+      minPurchaseAmount: 5,
       maxPurchaseAmount: 5000,
-      image: "/images/private-sale-tier1.jpg", // Placeholder image
+      image: "/images/seed-voucher.jpg",
       status: "active",
-      soldAmount: 0, // Example sold amount
-    },
+      soldAmount: 0
+    },    
     {
       id: 2,
-      tierName: "Private Sale Tier 2",
-      description: "Second private sale round, slightly higher price point.",
+      tierName: "Genesis Voucher",
+      description: "The second wave for visionaries who missed the Seed. Still early, still powerful, before the world catches on.",
       totalTokens: 25000000,
       pricePerToken: 0.0055,
       minPurchaseAmount: 100,
       maxPurchaseAmount: 1000,
-      image: "/images/private-sale-tier2.jpg", // Placeholder image
+      image: "/images/genesis-voucher.jpg",
       status: "upcoming",
-      soldAmount: 0, // Not yet started
-    }
+      soldAmount: 0
+    },
+    {
+      id: 3,
+      tierName: "Pioneer Voucher",
+      description: "A chance for bold pioneers to join the mission. Price rises, but rewards and access remain strong.",
+      totalTokens: 40000000,
+      pricePerToken: 0.008,
+      minPurchaseAmount: 250,
+      maxPurchaseAmount: 2000,
+      image: "/images/pioneer-voucher.jpg",
+      status: "upcoming",
+      soldAmount: 0
+    },
+    // {
+    //   id: 4,
+    //   tierName: "Visionary Voucher",
+    //   description: "Reserved for those who see the future clearly. A higher commitment, a stronger position, and exclusive perks.",
+    //   totalTokens: 50000000,
+    //   pricePerToken: 0.012,
+    //   minPurchaseAmount: 500,
+    //   maxPurchaseAmount: 5000,
+    //   image: "/images/visionary-voucher.jpg",
+    //   status: "upcoming",
+    //   soldAmount: 0
+    // },
+    // {
+    //   id: 5,
+    //   tierName: "Frontier Voucher",
+    //   description: "The last stop before public launch. Higher price, limited availability, but still massive potential upside.",
+    //   totalTokens: 30000000,
+    //   pricePerToken: 0.018,
+    //   minPurchaseAmount: 1000,
+    //   maxPurchaseAmount: 10000,
+    //   image: "/images/frontier-voucher.jpg",
+    //   status: "upcoming",
+    //   soldAmount: 0
+    // }
+    
   ]);
 
   // Add new state for purchase modal
@@ -269,7 +306,7 @@ const SmartStore = () => {
       await refreshSTKBalance();
       
       // Show success notification for manual balance refresh
-      showNotification('💎 Balance Refreshed', 'Your crystal balance has been updated', 'success');
+      showNotification('💎 Balance Refreshed', 'Your voucher balance has been updated', 'success');
     } catch (error) {
       console.error('Error refreshing balance:', error);
       showNotification('Refresh Error', 'Failed to refresh balance', 'error');
@@ -444,14 +481,14 @@ const SmartStore = () => {
 
         // Show success notification with reward animation
         showRewardNotification(
-          '💎 Crystal Purchase Successful!',
+          '💎 Voucher Purchase Successful!',
           tokensPurchased,
-          'STK Crystals'
+          'STK Vouchers'
         );
         
         // Also show upgrade-style notification for the transaction
         showUpgradeNotification(
-          `${tokensPurchased.toFixed(2)} STK Crystals Acquired`,
+          `${tokensPurchased.toFixed(2)} STK Vouchers Acquired`,
           tonAmount
         );
         
@@ -714,7 +751,7 @@ const SmartStore = () => {
                 </p>
                 <ul className="mt-3 space-y-2">
                   {[
-                    "Purchase divine crystals",
+                    "Purchase Stakers Token Voucher",
                     "Track your investments",
                     "Access special offerings",
                     "Manage your portfolio"
@@ -788,7 +825,7 @@ const SmartStore = () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                    Purchase Crystals
+                    Purchase Vouchers
                   </h2>
                   <p className="text-sm text-gray-400">{selectedOffering.tierName}</p>
                 </div>
@@ -809,7 +846,7 @@ const SmartStore = () => {
               {/* Tier Info */}
               <div className="p-4 rounded-xl bg-gradient-to-br from-white/5 to-white/0 border border-white/10">
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm text-gray-400">Price per Crystal</span>
+                  <span className="text-sm text-gray-400">Price per Voucher</span>
                   <span className="text-sm font-bold text-white">
                     ${selectedOffering.pricePerToken.toFixed(4)}
                   </span>
@@ -946,7 +983,7 @@ const SmartStore = () => {
   // Compact Futuristic Loading state
   if (isLoadingPrice) {
     return (
-      <div className="w-full flex items-center justify-center p-3 bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-[200px]">
+      <div className="w-full flex items-center justify-center p-3 min-h-[200px]">
         <div className="flex flex-col items-center space-y-3 max-w-xs w-full">
           {/* Compact Loading Animation */}
           <div className="relative">
@@ -954,7 +991,7 @@ const SmartStore = () => {
               {/* Main Core */}
               <div className="absolute inset-0 backdrop-blur-xl bg-gradient-to-br from-cyan-500/20 via-purple-500/15 to-blue-600/20 rounded-full border border-cyan-400/30 shadow-[0_0_20px_rgba(6,182,212,0.4)] animate-pulse"></div>
               
-              {/* Inner Crystal */}
+              {/* Inner Voucher */}
               <div className="relative w-full h-full flex items-center justify-center">
                 <GiCrystalCluster size={20} className="text-cyan-400 animate-bounce drop-shadow-[0_0_8px_currentColor]" />
               </div>
@@ -980,14 +1017,14 @@ const SmartStore = () => {
               ))}
               
               {/* Pulsing Aura */}
-              <div className="absolute -inset-2 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-full blur-xl animate-ping" style={{ animationDuration: '2s' }}></div>
+              <div className="absolute -inset-2 rounded-full blur-xl animate-ping" style={{ animationDuration: '2s' }}></div>
             </div>
           </div>
 
           {/* Compact Loading Message */}
-          <div className="text-center space-y-2 backdrop-blur-xl bg-gradient-to-r from-gray-900/60 to-black/60 rounded-lg p-3 border border-cyan-500/20">
+          <div className="text-center space-y-2 backdrop-blur-xl rounded-lg p-3 border border-cyan-500/20">
             <div className="text-xs text-cyan-400 font-bold tracking-wide animate-pulse">
-              ⚡ CRYSTAL MARKET ⚡
+              ⚡ VOUCHER MARKET ⚡
             </div>
             <div className="text-[10px] text-purple-300 font-medium">
               💎 Syncing prices...
@@ -1021,7 +1058,7 @@ const SmartStore = () => {
   }
 
   return (
-    <div className="w-full relative overflow-hidden">
+    <div className="w-full relative overflow-hidden p-custom">
       {/* Background Effects */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Animated Mesh Background */}
@@ -1065,7 +1102,7 @@ const SmartStore = () => {
               </div>
               <div className="text-center">
                 <h3 className="text-sm font-bold text-cyan-300 mb-1 tracking-wide">⚡ WALLET CONNECTION ⚡</h3>
-                <p className="text-purple-300 text-xs">Connect TON wallet for crystal offerings</p>
+                <p className="text-purple-300 text-xs">Connect TON wallet for STK Voucher offerings</p>
               </div>
             </div>
             <div className="flex justify-center">
@@ -1116,7 +1153,7 @@ const SmartStore = () => {
                 <p className="text-lg font-bold text-white drop-shadow-[0_0_8px_rgba(147,51,234,0.5)]">
                   ${STK_PRICE_USDT.toFixed(4)}
                 </p>
-                <div className="text-[10px] text-purple-400 mt-0.5">💎 CRYSTAL</div>
+                <div className="text-[10px] text-purple-400 mt-0.5">💎 VOUCHER</div>
               </div>
               <div className="relative">
                 <div className="w-8 h-8 backdrop-blur-sm bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-full flex items-center justify-center border border-purple-400/40">
@@ -1140,7 +1177,7 @@ const SmartStore = () => {
                   <GiCrystalBall size={16} className="text-cyan-400 drop-shadow-[0_0_8px_currentColor]" />
                   <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></div>
                 </div>
-                ⚡ TON CRYSTAL ⚡
+                ⚡ TON VOUCHER ⚡
               </h3>
               <button
                 onClick={refreshUserBalance}
@@ -1162,7 +1199,7 @@ const SmartStore = () => {
                       maximumFractionDigits: 2 
                     })}
                   </p>
-                  <div className="text-[10px] text-cyan-400 mt-0.5 opacity-80">CRYSTALS</div>
+                  <div className="text-[10px] text-cyan-400 mt-0.5 opacity-80">VOUCHERS</div>
                 </div>
                 <div className="text-right">
                   <p className="text-purple-300 font-bold mb-1 tracking-wide text-xs">⚡ VALUE USDT</p>
@@ -1203,7 +1240,7 @@ const SmartStore = () => {
                 <GiCrystalGrowth size={16} className="text-cyan-400 drop-shadow-[0_0_8px_currentColor]" />
                 <div className="absolute -inset-0.5 bg-cyan-400/20 rounded-full blur-sm animate-ping" style={{ animationDuration: '2s' }}></div>
               </div>
-              ⚡ TON CRYSTAL OFFERINGS ⚡
+              ⚡ STK VOUCHER OFFERINGS ⚡
             </h3>
             <div className="backdrop-blur-sm bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-full px-3 py-1 border border-cyan-400/30">
               <div className="text-xs text-cyan-300 font-bold flex items-center gap-1">
@@ -1380,7 +1417,7 @@ const SmartStore = () => {
                   <div className="backdrop-blur-sm bg-gradient-to-br from-gray-800/40 to-gray-900/40 rounded-lg p-4 border border-gray-500/20 text-center">
                     <GiTrophy size={24} className="text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-400">No purchase history yet</p>
-                    <p className="text-xs text-gray-500 mt-1">Start your crystal collection!</p>
+                    <p className="text-xs text-gray-500 mt-1">Start your Voucher collection!</p>
                   </div>
                 )}
               </div>
