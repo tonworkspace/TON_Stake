@@ -12,8 +12,9 @@ import { GameProvider, useGameContext } from '@/contexts/GameContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { 
   GiCrystalBall, 
-  GiShop,
-  GiDiamonds
+  GiDiamonds,
+  GiGlowingArtifact,
+  GiGearStickPattern
 } from 'react-icons/gi';
 import { BiHome } from 'react-icons/bi';
 // Import gem sync test utilities for debugging
@@ -21,6 +22,10 @@ import '@/utils/gemSyncTest';
 import DailyRewards from '@/components/DailyRewards';
 import SmartStore from '@/components/SmartStore';
 import { ShoutboxHeader } from '@/components/ShoutboxHeader/ShoutboxHeader';
+import TGEComponent from '@/components/TGEComponent';
+import OrderAdminDashboard from '@/components/OrderAdminDashboard';
+import OrderStatusNotifications from '@/components/OrderStatusNotifications';
+import AdminAccessControl from '@/components/AdminAccessControl';
 
 // Compact Auto-hide Wallet Connection Banner
 const WalletConnectionBanner: FC<{ NETWORK_NAME: string }> = ({ NETWORK_NAME }) => {
@@ -891,6 +896,9 @@ export const IndexPage: FC = () => {
       
           <div className="relative z-10">
             {!isLoading && user && <OnboardingScreen />}
+            
+            {/* Order Status Notifications */}
+            {user && <OrderStatusNotifications />}
 
             {/* Compact Main Content Area */}
             <div className="flex-1 pb-20 px-3 pt-3 max-w-md mx-auto">
@@ -923,10 +931,16 @@ export const IndexPage: FC = () => {
               )}
 
               {/* Content Sections */}
+              {currentTab === 'tge' && <TGEComponent />}
               {currentTab === 'zodiac' && <DivineMiningGame setCurrentTab={setCurrentTab} />}
               {currentTab === 'daily' && <DailyRewards />}
               {currentTab === 'divine' && <DivinePointsLeaderboard />}
               {currentTab === 'store' && <SmartStore />}
+              {currentTab === 'admin' && (
+                <AdminAccessControl>
+                  <OrderAdminDashboard />
+                </AdminAccessControl>
+              )}
               {currentTab === 'crystals' && (
                 <div className="flex-1 overflow-y-auto">
                   <TaskCenter/>
@@ -948,14 +962,13 @@ export const IndexPage: FC = () => {
               <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/1 via-transparent to-transparent animate-pulse" style={{ animationDuration: '8s' }}></div>
               
               <div className="max-w-lg mx-auto px-3 py-3 relative">
-                <div className="grid grid-cols-4 items-center gap-2">
+                <div className="grid grid-cols-5 items-center gap-2">
                   {[
+                    { id: 'tge', text: 'TGE', Icon: GiGlowingArtifact, colors: ['from-emerald-500', 'to-green-600', 'emerald'] },
                     { id: 'daily', text: 'Stake', Icon: BiHome, colors: ['from-purple-500', 'to-pink-600', 'purple'] },
                     { id: 'zodiac', text: 'Mine', Icon: GiCrystalBall, colors: ['from-cyan-500', 'to-blue-600', 'cyan'] },
                     { id: 'divine', text: 'Ranks', Icon: GiDiamonds, colors: ['from-yellow-500', 'to-orange-600', 'yellow'] },
-                    { id: 'store', text: 'Store', Icon: GiShop, colors: ['from-cyan-500', 'to-blue-600', 'cyan'] },
-                    // { id: 'crystals', text: 'Tasks', Icon: GiCrystalCluster, colors: ['from-emerald-500', 'to-green-600', 'emerald'] },
-                    // { id: 'spells', text: 'Referrals', Icon: GiSpellBook, colors: ['from-pink-500', 'to-rose-600', 'pink'] },
+                    { id: 'admin', text: 'Admin', Icon: GiGearStickPattern, colors: ['from-red-500', 'to-pink-600', 'red'] },
                   ].map(({ id, text, Icon, colors }) => {
                     const isActive = currentTab === id;
                     const [fromColor, toColor, baseColor] = colors;
