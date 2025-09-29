@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTonAddress } from '@tonconnect/ui-react';
+import { OrderDetailsModal } from './modals/OrderDetailsModal';
 import { Address } from '@ton/core';
 import { supabase } from '@/lib/supabaseClient';
 import useAuth from '@/hooks/useAuth';
@@ -33,6 +34,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
   const [activeTab, setActiveTab] = useState<'claim' | 'orders'>('claim');
   const [userOrders, setUserOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [hasAlreadyClaimed, setHasAlreadyClaimed] = useState(false);
   const [userClaimStatus, setUserClaimStatus] = useState<{
     hasRejectedClaims: boolean;
@@ -1430,49 +1432,11 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
                         📋 Console
                       </button>
                       <button
-                        onClick={() => {
-                          // Show detailed modal with all order information
-                          const details = `
-🎯 ORDER #${order.id} - DETAILED VIEW
-
-👤 PLAYER INFORMATION:
-• Name: ${order.telegram_first_name || 'N/A'} ${order.telegram_last_name || ''}
-• Username: @${order.telegram_username || 'N/A'}
-• Telegram ID: ${order.telegram_id || 'N/A'}
-
-💰 PORTFOLIO DETAILS:
-• Portfolio Value: $${order.portfolio_value?.toLocaleString() || '0'}
-• TON Balance: ${order.ton_balance?.toFixed(4) || '0.0000'} TON
-• STK Amount: ${order.stk_amount?.toLocaleString() || '0'} STK
-• STKN Balance: ${order.stkn_balance?.toLocaleString() || '0'} STKN
-• Mining Balance: ${order.total_stk_mining?.toLocaleString() || '0'} STK
-• NFT Token ID: ${order.nft_token_id || 'Not provided'}
-
-🎯 CLAIM INFORMATION:
-• Claim Amount: ${order.claim_amount?.toLocaleString() || '0'} STK
-• Approval Status: ${order.approval_status || 'Unknown'}
-• Payment Status: ${order.payment_status || 'Unknown'}
-• Network: ${order.network || 'Unknown'}
-
-🔗 WALLET & SESSION:
-• Wallet: ${order.wallet_address || 'Not provided'}
-• Session ID: ${order.session_id || 'N/A'}
-
-📅 TIMESTAMPS:
-• Submitted: ${order.claimed_at ? new Date(order.claimed_at).toLocaleString() : 'N/A'}
-• Approved: ${order.approved_at ? new Date(order.approved_at).toLocaleString() : 'Not approved'}
-
-${order.rejection_reason ? `❌ REJECTION REASON:\n${order.rejection_reason}` : ''}
-${order.admin_notes ? `📝 ADMIN NOTES:\n${order.admin_notes}` : ''}
-${order.payment_tx_hash ? `🔗 TRANSACTION:\n${order.payment_tx_hash}` : ''}
-${order.payment_processed_at ? `✅ PAYMENT DATE:\n${new Date(order.payment_processed_at).toLocaleString()}` : ''}
-                          `;
-                          showSnackbar('📋 Complete Order Details', details);
-                        }}
-                      className="px-2 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-300 text-xs rounded border border-green-500/30 transition-colors"
-                    >
+                        onClick={() => setSelectedOrder(order)}
+                        className="px-2 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-300 text-xs rounded border border-green-500/30 transition-colors"
+                      >
                         📊 Full Details
-                    </button>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1563,6 +1527,12 @@ ${order.payment_processed_at ? `✅ PAYMENT DATE:\n${new Date(order.payment_proc
           )}
       </div>
       )}
+
+      <OrderDetailsModal
+        isOpen={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        order={selectedOrder}
+      />
     </div>
   );
 };
