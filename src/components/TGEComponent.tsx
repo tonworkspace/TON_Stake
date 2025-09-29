@@ -42,6 +42,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     hasRejectedClaims: false,
     hasActiveClaims: false
   });
+  const [finalClaimedAmount, setFinalClaimedAmount] = useState<number | null>(null);
   
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
@@ -538,6 +539,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       // Mark as claimed (one-time only)
       setHasAlreadyClaimed(true);
       setCompletedSteps(prev => [...prev, currentStep]);
+      setFinalClaimedAmount(calculatedReceiveAmount);
 
       // Log successful claim with detailed order information
       const orderDetails = {
@@ -1228,6 +1230,16 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
           <p className="text-gray-300 mb-6">
             You have successfully claimed your STK tokens! This was a one-time claim opportunity.
           </p>
+
+          {finalClaimedAmount !== null && (
+            <div className="my-6 p-4 bg-black/20 rounded-lg border border-yellow-500/30">
+              <p className="text-lg text-gray-200">You are claiming a total of:</p>
+              <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 animate-pulse">
+                {finalClaimedAmount.toLocaleString()} STK
+              </p>
+            </div>
+          )}
+
           <div className="bg-gradient-to-r from-green-900/20 to-emerald-900/20 rounded-lg p-4 border border-green-500/30">
             <p className="text-green-300 font-semibold">
               ✅ Claim completed successfully!
