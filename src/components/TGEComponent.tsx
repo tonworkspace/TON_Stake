@@ -1415,7 +1415,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
                     </div>
                   )}
 
-                  <div className="mt-2 pt-2 border-t border-gray-600 flex justify-between items-center">
+                  {/* <div className="mt-2 pt-2 border-t border-gray-600 flex justify-between items-center">
                     <span className="text-gray-500 text-xs">
                       Session: {order.session_id?.substring(0, 8) || 'N/A'}
                     </span>
@@ -1474,7 +1474,7 @@ ${order.payment_processed_at ? `✅ PAYMENT DATE:\n${new Date(order.payment_proc
                         📊 Full Details
                     </button>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               ))}
             </div>
@@ -1504,7 +1504,7 @@ ${order.payment_processed_at ? `✅ PAYMENT DATE:\n${new Date(order.payment_proc
               </div>
               
               {/* Status Summary */}
-              <div className="mt-3 pt-3 border-t border-blue-500/30">
+              {/* <div className="mt-3 pt-3 border-t border-blue-500/30">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-yellow-300">Pending:</span>
@@ -1531,10 +1531,10 @@ ${order.payment_processed_at ? `✅ PAYMENT DATE:\n${new Date(order.payment_proc
                     </span>
                   </div>
                 </div>
-              </div>
+              </div> */}
               
               {/* Debug Information */}
-              <div className="mt-3 pt-3 border-t border-blue-500/30">
+              {/* <div className="mt-3 pt-3 border-t border-blue-500/30">
                 <div className="text-center">
                   <button
                     onClick={() => {
@@ -1558,7 +1558,7 @@ ${order.payment_processed_at ? `✅ PAYMENT DATE:\n${new Date(order.payment_proc
                     🔍 Debug Data Structure
                   </button>
                 </div>
-              </div>
+              </div> */}
             </div>
           )}
       </div>
