@@ -736,57 +736,90 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
   };
 
   // Wizard Progress Component
-  const WizardProgress = () => (
-    <div className="mb-8">
-      <div className="flex items-center justify-between mb-4">
-        {wizardSteps.map((step, index) => (
-          <div key={step.id} className="flex flex-col items-center">
-            <button
-              onClick={() => goToStep(index)}
-              disabled={!isStepAccessible(index)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all duration-300 transform hover:scale-110 ${
-                index === currentStep
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg scale-110'
-                  : isStepCompleted(index)
-                  ? 'bg-green-500 text-white shadow-md'
-                  : isStepAccessible(index)
-                  ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                  : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-              }`}
-            >
-              {isStepCompleted(index) ? '✅' : step.icon}
-            </button>
-            <span className={`text-xs mt-2 text-center max-w-16 ${
-              index === currentStep ? 'text-purple-300 font-semibold' : 'text-gray-400'
-            }`}>
-              {step.title.split(' ')[0]}
-            </span>
-          </div>
-        ))}
+  const WizardProgress = () => {
+    // Progress is based on the current step, reaching 100% only after claiming.
+    const progressPercentage = hasAlreadyClaimed
+      ? 100
+      : (currentStep / wizardSteps.length) * 100;
+
+    return (
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          {wizardSteps.map((step, index) => {
+            // A step is considered "completed" if we have already claimed, or if its index is in the completedSteps array.
+            const isCompleted = hasAlreadyClaimed || isStepCompleted(index);
+            const isActive = !hasAlreadyClaimed && index === currentStep;
+
+            // A step is accessible if we haven't claimed yet and it's the current step or a completed one.
+            const isAccessible = !hasAlreadyClaimed && isStepAccessible(index);
+
+            return (
+              <div key={step.id} className="flex flex-col items-center">
+                <button
+                  onClick={() => goToStep(index)}
+                  // Disable button if already claimed or if the step is not accessible.
+                  disabled={hasAlreadyClaimed || !isAccessible}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all duration-300 transform hover:scale-110 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg scale-110'
+                      : isCompleted
+                      ? 'bg-green-500 text-white shadow-md' // All steps are green after claim
+                      : isAccessible
+                      ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                      : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                  }`}
+                >
+                  {isCompleted ? '✅' : step.icon}
+                </button>
+                <span className={`text-xs mt-2 text-center max-w-16 ${
+                  isActive ? 'text-purple-300 font-semibold' : 'text-gray-400'
+                }`}>
+                  {step.title.split(' ')[0]}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full bg-gray-800 rounded-full h-2 mb-4">
+          <div
+            className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+
+        {/* Current step info: Shows completion message if claimed, otherwise shows current step details. */}
+        <div className="text-center">
+          {hasAlreadyClaimed ? (
+            <>
+              <h3 className="text-2xl font-bold text-green-400 mb-1 animate-pulse">
+                🎉 Claim Submitted!
+              </h3>
+              <p className="text-gray-300 text-sm">
+                Your submission is complete. Check "My Orders" for status updates.
+              </p>
+              <p className="text-green-300 text-xs mt-1">
+                Process Complete
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {wizardSteps[currentStep].title}
+              </h3>
+              <p className="text-gray-300 text-sm">
+                {wizardSteps[currentStep].description}
+              </p>
+              <p className="text-purple-300 text-xs mt-1">
+                Step {currentStep + 1} of {wizardSteps.length}
+              </p>
+            </>
+          )}
+        </div>
       </div>
-      
-      {/* Progress bar */}
-      <div className="w-full bg-gray-800 rounded-full h-2 mb-4">
-        <div 
-          className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${((currentStep + 1) / wizardSteps.length) * 100}%` }}
-        />
-      </div>
-      
-      {/* Current step info */}
-      <div className="text-center">
-        <h3 className="text-xl font-bold text-white mb-1">
-          {wizardSteps[currentStep].title}
-        </h3>
-        <p className="text-gray-300 text-sm">
-          {wizardSteps[currentStep].description}
-        </p>
-        <p className="text-purple-300 text-xs mt-1">
-          Step {currentStep + 1} of {wizardSteps.length}
-        </p>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="max-w-lg mx-auto bg-gradient-to-br from-purple-900/20 to-blue-900/20 rounded-2xl p-6 border border-purple-500/20 shadow-2xl">
