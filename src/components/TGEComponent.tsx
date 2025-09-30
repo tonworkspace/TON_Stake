@@ -1211,7 +1211,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
                   <div className="border-t border-gray-600 pt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300 font-semibold">Amount to Receive:</span>
-                      <span className="text-yellow-400 font-bold text-lg">
+                      <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 animate-pulse">
                         {calculatedReceiveAmount.toLocaleString()} STK
                       </span>
         </div>
