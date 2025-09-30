@@ -1303,9 +1303,9 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
           </p>
 
           {finalClaimedAmount !== null && (
-            <div className="my-6 p-4 bg-black/20 rounded-lg border border-yellow-500/30">
-              <p className="text-lg text-gray-200">You are claiming a total of:</p>
-              <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 animate-pulse">
+            <div className="my-8 p-6 bg-gradient-to-br from-purple-900/50 to-green-900/50 rounded-2xl border-2 border-green-400/50 shadow-2xl shadow-green-500/20">
+              <p className="text-xl text-center text-gray-300 mb-2">You have claimed:</p>
+              <p className="text-6xl font-black text-center text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-cyan-300 to-purple-400 animate-pulse tracking-tight">
                 {finalClaimedAmount.toLocaleString()} STK
               </p>
             </div>
