@@ -3,6 +3,7 @@ import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { Address, toNano } from '@ton/core';
 import { supabase } from '@/lib/supabaseClient';
 import useAuth from '@/hooks/useAuth';
+import { useNotificationSystem } from '@/components/NotificationSystem';
 
 interface TokenReceiverProps {
   onClaimSuccess?: (amount: number) => void;
@@ -10,6 +11,7 @@ interface TokenReceiverProps {
 
 const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
   const { user, telegramUser } = useAuth();
+  const { showSystemNotification } = useNotificationSystem();
   const userFriendlyAddress = useTonAddress();
   
   const [walletAddress, setWalletAddress] = useState('');
@@ -150,15 +152,8 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
   };
   
   // Snackbar helper function
-  const showSnackbar = (title: string, message: string) => {
-    // Simple console log for now - you can replace with actual snackbar implementation
-    console.log(`${title}: ${message}`);
-    
-    // You can replace this with a proper toast/snackbar implementation
-    // For example, using react-hot-toast or your preferred toast library
-    if (window.alert) {
-      window.alert(`${title}\n\n${message}`);
-    }
+  const showSnackbar = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    showSystemNotification(title, message, type);
   };
 
   // Simple address validation
@@ -398,7 +393,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       setUserOrders(data || []);
     } catch (error) {
       console.error('Error fetching user orders:', error);
-      showSnackbar('Error', 'Failed to fetch your order history');
+      showSnackbar('Error', 'Failed to fetch your order history', 'error');
     } finally {
       setLoadingOrders(false);
     }
@@ -422,7 +417,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
         .eq('nft_token_id', nftIdNum.toString())
         .limit(1);
       if (existingWithSameNft && existingWithSameNft.length > 0) {
-        showSnackbar('NFT Token In Use', `NFT Token ID #${nftIdNum} has already been used.`);
+        showSnackbar('NFT Token In Use', `NFT Token ID #${nftIdNum} has already been used.`, 'warning');
         return false;
       }
 
@@ -478,20 +473,20 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     // Validate all inputs first
     const validationErrors = validateClaimInputs();
     if (validationErrors.length > 0) {
-      showSnackbar('Validation Failed', validationErrors.join('\n'));
+      showSnackbar('Validation Failed', validationErrors.join('\n'), 'error');
       return;
     }
 
     // Check one-time claim eligibility
     const canClaim = await checkClaimEligibility();
     if (!canClaim) {
-      showSnackbar('Already Claimed', 'You have already claimed your tokens. This is a one-time claim only.');
+      showSnackbar('Already Claimed', 'You have already claimed your tokens. This is a one-time claim only.', 'warning');
       return;
     }
 
     // Require successful TON payment before submission
     if (!hasPaid || !paymentTxHash) {
-      showSnackbar('Payment Required', 'Please complete the TON payment first.');
+      showSnackbar('Payment Required', 'Please complete the TON payment first.', 'warning');
       return;
     }
 
@@ -591,7 +586,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
 🔗 Wallet: ${walletAddress.substring(0, 8)}...${walletAddress.substring(-6)}
 ⏰ Time: ${new Date().toLocaleString()}`;
 
-      showSnackbar('🎯 Tokens Claimed Successfully!', successMessage);
+      showSnackbar('🎯 Tokens Claimed Successfully!', successMessage, 'success');
 
       // Switch to orders tab and refresh to show the new order
       setActiveTab('orders');
@@ -604,7 +599,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     } catch (error) {
       console.error('Error claiming tokens:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      showSnackbar('Claim Failed', `There was an error claiming tokens: ${errorMessage}`);
+      showSnackbar('Claim Failed', `There was an error claiming tokens: ${errorMessage}`, 'error');
     } finally {
       setIsClaiming(false);
     }
@@ -645,7 +640,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
   // TON payment handler
   const handlePayTon = async () => {
     if (!walletAddress || !isValidAddress(walletAddress)) {
-      showSnackbar('Invalid Wallet', 'Please enter a valid TON wallet address first');
+      showSnackbar('Invalid Wallet', 'Please enter a valid TON wallet address first', 'warning');
       return;
     }
     try {
@@ -663,7 +658,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       const result = await tonConnectUI.sendTransaction(tx);
       if (!result) {
         // Similar to DailyRewards, treat missing result as cancellation
-        showSnackbar('Payment Cancelled', 'Transaction was cancelled. Please try again.');
+        showSnackbar('Payment Cancelled', 'Transaction was cancelled. Please try again.', 'info');
         setHasPaid(false);
         setPaymentTxHash(null);
         return;
@@ -672,12 +667,12 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       const hash = (result as any)?.boc || `tx_${Date.now()}`;
       setPaymentTxHash(hash);
       setHasPaid(true);
-      showSnackbar('Payment Success', 'TON payment confirmed. You can submit your claim now.');
+      showSnackbar('Payment Success', 'TON payment confirmed. You can submit your claim now.', 'success');
     } catch (e) {
       console.error('TON payment failed:', e);
       setHasPaid(false);
       setPaymentTxHash(null);
-      showSnackbar('Payment Failed', 'Could not complete TON payment. Please try again.');
+      showSnackbar('Payment Failed', 'Could not complete TON payment. Please try again.', 'error');
     } finally {
       setIsPaying(false);
     }
@@ -706,11 +701,11 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
         setUserStknBalance(suggestedStkn.toString());
         setUserTotalStkMining(suggestedMining.toString());
 
-        showSnackbar('Auto-Fill Complete', 'Balances filled based on your account history');
+        showSnackbar('Auto-Fill Complete', 'Balances filled based on your account history', 'success');
       }
     } catch (error) {
       console.error('Auto-fill failed:', error);
-      showSnackbar('Auto-Fill Failed', 'Could not fetch your account data');
+      showSnackbar('Auto-Fill Failed', 'Could not fetch your account data', 'error');
     } finally {
       setIsAutoFilling(false);
     }
