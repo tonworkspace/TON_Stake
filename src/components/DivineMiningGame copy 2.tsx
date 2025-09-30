@@ -385,7 +385,6 @@ export const DivineMiningGame: React.FC<{ setCurrentTab?: (tab: string) => void 
   // const [isNewPlayer, setIsNewPlayer] = useState(false);
   // const [isSavingToDatabase, setIsSavingToDatabase] = useState(false);
   const [showUpgradeShop, setShowUpgradeShop] = useState(false);
-  const [showFinalScoreBanner, setShowFinalScoreBanner] = useState(true);
   
   // // Add comprehensive loading states
   // const [isLoading, setIsLoading] = useState(true);
@@ -4695,26 +4694,6 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center space-y-4 overflow-y-auto game-scrollbar">
-      {/* Final Score Banner prompting to claim in TGE */}
-      {showFinalScoreBanner && (
-        <div className="w-full max-w-md mx-auto bg-gradient-to-r from-yellow-900/40 to-orange-900/40 border border-yellow-500/40 rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-yellow-300 text-xs font-mono">FINAL SCORE</div>
-              <div className="text-white font-mono font-bold text-lg">
-                {Math.floor((gameState?.totalPointsEarned || 0)).toLocaleString()}
-              </div>
-              <div className="text-yellow-200 text-[10px]">Go to TGE to claim your reward</div>
-            </div>
-            <button
-              onClick={() => setCurrentTab && setCurrentTab('tge')}
-              className="px-3 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-mono font-bold"
-            >
-              Claim in TGE →
-            </button>
-          </div>
-        </div>
-      )}
       {/* Loading Screen */}
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
@@ -4738,7 +4717,53 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
               {/* Compact Centered Divine Mining Card */}
       <div className="relative w-full max-w-xl overflow-hidden game-card-frame">
         {/* Professional Mining Dashboard Header */}
-        
+        <div className="relative z-10 rounded-xl mb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {/* Compact Mining Status */}
+              <div className="flex items-center space-x-2">
+                              <div className={`w-3 h-3 rounded-full ${gameState.isMining 
+                ? 'bg-pink-400 animate-pulse shadow-[0_0_4px_rgba(236,72,153,0.4)]' 
+                : 'bg-gray-500'
+              }`}></div>
+                <div className="text-xs font-mono font-bold text-white tracking-wider">
+                  TONERS MINER • <span className={gameState.isMining ? 'text-pink-400' : 'text-gray-400'}>
+                    {gameState.isMining ? 'ACTIVE' : 'STANDBY'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Inline Hash Rate */}
+              <div className="flex items-center space-x-1 ml-4">
+                <span className="text-xs font-mono font-bold text-blue-400">HASH:</span>
+                <span className="text-sm font-mono font-bold text-white">
+                  {getBoostedMiningRate().toFixed(1)}/s
+                </span>
+              </div>
+            </div>
+            
+            {/* Compact Tier Badge */}
+            {(() => {
+              const currentTier = getCurrentTier(gameState.miningLevel);
+              const tierColors = {
+                green: 'text-pink-400 bg-pink-900/30 border-pink-500/30 hover:bg-pink-800/40 hover:border-pink-400/50',
+                blue: 'text-blue-400 bg-blue-900/30 border-blue-500/30 hover:bg-blue-800/40 hover:border-blue-400/50',
+                purple: 'text-purple-400 bg-purple-900/30 border-purple-500/30 hover:bg-purple-800/40 hover:border-purple-400/50',
+                yellow: 'text-yellow-400 bg-yellow-900/30 border-yellow-500/30 hover:bg-yellow-800/40 hover:border-yellow-400/50'
+              };
+              return (
+                <button
+                  onClick={() => setShowTierInfo(true)}
+                  className={`text-xs font-mono font-bold px-3 py-1 rounded-lg border flex items-center space-x-1 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer shadow-lg ${tierColors[currentTier.color as keyof typeof tierColors]}`}
+                  title="Click for mining tier information"
+                >
+                  <span className="text-sm">{currentTier.symbol}</span>
+                  <span>{currentTier.name}</span>
+                </button>
+              );
+            })()}
+          </div>
+        </div>
           
 
 
@@ -4753,9 +4778,17 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
               ? 'text-purple-300 drop-shadow-[0_0_8px_rgba(147,51,234,0.4)]' 
               : 'text-blue-300 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]'
           }`}>
-            {formatNumber(gameState.totalPointsEarned)}
+            {formatNumber(gameState.divinePoints)}
           </div>
-                          <div className="text-sm font-mono text-pink-400 tracking-wider mb-1 stakers-tokens-display">TOTAL STAKERS TOKEN</div>
+                          <div className="text-sm font-mono text-pink-400 tracking-wider mb-1 stakers-tokens-display">STAKERS TOKEN</div>
+          <div className="text-sm font-mono text-blue-300">
+            +{getBoostedMiningRate().toFixed(1)} STK/sec
+            {gameState.miningCombo > 1.1 && (
+              <span className="ml-2 text-pink-400 font-bold text-base">
+                {gameState.miningCombo.toFixed(1)}x boost
+              </span>
+            )}
+          </div>
         {/* New Button: "Buy More STK" */}
         <div className="mt-3 flex justify-center space-x-3">
           {/* <button
@@ -4817,8 +4850,169 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
         </div>
 
         {/* Professional Mining Control Panel */}
+        <div className="relative z-10 flex justify-center items-center mb-8">
+          <div className="relative">
+            {/* Mining Status Ring */}
+            <div className={`absolute inset-0 w-52 h-52 rounded-full ${gameState.isMining ? 'animate-spin' : ''}`} style={{ animationDuration: '8s' }}>
+              <div className="w-full h-full rounded-full border-4 border-transparent" style={{
+                background: `conic-gradient(${gameState.isMining ? '#ec4899, #3b82f6, #8b5cf6, #ec4899, #3b82f6' : '#404040, #404040'})`,
+                padding: '2px'
+              }}>
+                <div className="w-full h-full rounded-full bg-gray-900"></div>
+              </div>
+            </div>
+            
+            {/* Main Mining Button */}
+            <div className="relative group">
+              {/* Outer glow ring */}
+              <div className={`
+                absolute inset-0 rounded-full transition-all duration-300 blur-sm opacity-60
+                ${gameState.isMining 
+                  ? 'bg-gradient-to-r from-pink-400 via-purple-500 to-pink-600 animate-pulse' 
+                  : gameState.currentEnergy < 1
+                  ? 'bg-gray-600/50'
+                  : 'bg-gradient-to-r from-blue-400 via-pink-400 to-purple-500'
+                }
+              `} />
+              
+              {/* Energy progress ring */}
+              <div className="absolute inset-0 rounded-full">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.1)"
+                    strokeWidth="1.5"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="46"
+                    fill="none"
+                    stroke={gameState.currentEnergy < 20 ? "#ef4444" : "#ec4899"}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(gameState.currentEnergy / gameState.maxEnergy) * 289} 289`}
+                    className="transition-all duration-700 drop-shadow-[0_0_4px_currentColor]"
+                  />
+                </svg>
+              </div>
 
-        {/* <div className="relative z-10 mb-4">
+              <button 
+                onClick={toggleMining}
+                disabled={!gameState.isMining && gameState.currentEnergy < 1}
+                className={`
+                  relative w-52 h-52 rounded-full transition-all duration-300 font-mono font-bold z-10
+                  ${gameState.isMining 
+                    ? 'bg-gradient-to-br from-pink-500 via-purple-500 to-pink-700 hover:from-pink-400 hover:via-purple-400 hover:to-pink-600 text-white shadow-[0_0_20px_rgba(236,72,153,0.4)] border-2 border-pink-300/60' 
+                    : gameState.currentEnergy < 1
+                    ? 'bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 text-gray-400 cursor-not-allowed border-2 border-gray-600/40 shadow-[0_0_10px_rgba(107,114,128,0.2)]'
+                    : 'bg-gradient-to-br from-blue-500 via-pink-500 to-purple-600 hover:from-blue-400 hover:via-pink-400 hover:to-purple-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] border-2 border-blue-300/60'
+                  }
+                  ${!gameState.isMining && gameState.currentEnergy >= 1 ? 'hover:scale-105' : gameState.isMining ? 'hover:scale-102' : ''}
+                  active:scale-95
+                  backdrop-blur-xl
+                `}
+              >
+                {/* Inner content container */}
+                <div className="relative flex flex-col items-center justify-center h-full overflow-hidden">
+                  {/* Animated particles for mining state */}
+                  {gameState.isMining && (
+                    <div className="absolute inset-0 overflow-hidden rounded-full">
+                      {[...Array(4)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-0.5 h-0.5 bg-pink-300 rounded-full animate-bounce"
+                          style={{
+                            left: `${25 + i * 15}%`,
+                            top: `${35 + (i % 2) * 30}%`,
+                            animationDelay: `${i * 0.3}s`,
+                            animationDuration: '1.2s'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Mining Icon */}
+                  <div className={`
+                    text-3xl mb-1 transition-all duration-300
+                    ${gameState.isMining ? 'animate-pulse' : ''}
+                    ${!gameState.isMining && gameState.currentEnergy >= 1 ? 'group-hover:scale-110' : ''}
+                  `}>
+                    {gameState.isMining ? '⏹️' : gameState.currentEnergy < 1 ? '⚡' : '⛏️'}
+                  </div>
+
+                  {/* Mining Status */}
+                  <div className={`
+                    text-xs font-mono font-bold tracking-wider mb-1 uppercase
+                    ${gameState.isMining ? 'animate-pulse' : ''}
+                    bg-gradient-to-r bg-clip-text text-transparent
+                    ${gameState.isMining 
+                      ? 'from-white via-pink-200 to-white' 
+                      : gameState.currentEnergy < 1 
+                      ? 'from-gray-400 to-gray-500'
+                      : 'from-white via-blue-200 to-white'
+                    }
+                  `}>
+                    {gameState.isMining ? 'STOP' : gameState.currentEnergy < 1 ? 'LOW PWR' : 'START'}
+                  </div>
+
+                  {/* Hash Rate Display */}
+                  <div className={`
+                    text-xs font-mono font-bold px-2 py-0.5 rounded-full backdrop-blur-sm
+                    ${gameState.isMining 
+                      ? 'bg-white/20 text-pink-200' 
+                      : gameState.currentEnergy < 1
+                      ? 'bg-gray-800/60 text-gray-400'
+                      : 'bg-white/20 text-blue-200'
+                    }
+                    border border-white/30
+                  `}>
+                    {gameState.isMining ? `${getBoostedMiningRate().toFixed(1)} STK/s` : 'Ready'}
+                  </div>
+
+                  {/* Energy indicator */}
+                  {/* <div className={`
+                    absolute bottom-2 left-1/2 transform -translate-x-1/2
+                    text-xs font-mono font-bold px-1.5 py-0.5 rounded-full
+                    ${gameState.currentEnergy < 20 
+                      ? 'bg-red-500/80 text-white animate-pulse' 
+                      : gameState.currentEnergy < 50 
+                      ? 'bg-yellow-500/80 text-black' 
+                      : 'bg-green-500/80 text-white'
+                    }
+                    border border-white/40 backdrop-blur-sm
+                  `}>
+                    ⚡{gameState.currentEnergy}
+                  </div> */}
+                </div>
+
+                {/* Compact Mining Streak Badge */}
+                {gameState.miningStreak > 0 && (
+                  <div className="absolute -top-2 -right-2">
+                    <div className="relative bg-gradient-to-r from-pink-400 to-purple-500 text-white text-xs font-mono font-black px-2 py-1 rounded-full border border-pink-300 shadow-[0_0_5px_rgba(236,72,153,0.3)]">
+                      🔥{gameState.miningStreak}
+                    </div>
+                  </div>
+                )}
+
+                {/* Compact Level indicator */}
+                {gameState.miningLevel > 1 && (
+                  <div className="absolute -top-2 -left-2">
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-mono font-bold px-2 py-1 rounded-full border border-blue-300 shadow-[0_0_4px_rgba(59,130,246,0.3)]">
+                      L{gameState.miningLevel}
+                    </div>
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 mb-4">
           <button
             onClick={() => setShowUpgradeShop(true)}
             className="w-full flex items-center justify-between p-3 rounded-lg transition-all duration-300 font-mono font-bold border hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-r from-slate-900/80 to-gray-900/80 backdrop-blur-xl border border-pink-500/30 group"
@@ -4844,14 +5038,176 @@ const isPPSUpgradeType = (upgradeId: string): boolean => {
             </div>
           </button>
         </div>
-         */}
+        
         {/* Professional Energy Progress Bar */}
                  {/* Enhanced Dual Progress Display */}
-       
+         <div className="relative z-10 mb-4 group">
+           {/* Background glow effect */}
+           <div className="absolute inset-0 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-blue-500/20 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+           
+           <div className="relative bg-gradient-to-r from-slate-900/90 to-gray-900/90 backdrop-blur-xl border border-pink-500/40 rounded-xl p-4 shadow-[0_0_15px_rgba(236,72,153,0.1)] hover:shadow-[0_0_20px_rgba(236,72,153,0.15)] transition-all duration-300">
+             
+             {/* Enhanced Header Row */}
+             <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center space-x-4">
+                 <div className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-full border border-pink-500/30">
+                   <span className="text-lg animate-pulse">⚡</span>
+                   <span className="text-sm font-mono font-black text-pink-400 tracking-wider">POWER</span>
+                 </div>
+                 <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-500 to-transparent"></div>
+                 <div className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full border border-blue-500/30">
+                   <span className="text-lg">🎯</span>
+                   <span className="text-sm font-mono font-black text-blue-400 tracking-wider">EXP</span>
+                 </div>
+               </div>
+               <div className="px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30">
+                 <span className="text-sm font-mono font-black text-purple-400">LVL {gameState.miningLevel}</span>
+               </div>
+             </div>
+
+             {/* Enhanced Dual Progress Rings */}
+             <div className="relative flex items-center justify-center mb-4">
+               <div className="relative w-24 h-24 group">
+                 {/* Outer glow ring for energy */}
+                 <div className={`absolute inset-0 rounded-full transition-all duration-500 blur-sm ${
+                   gameState.currentEnergy < 20 ? 'bg-red-400/40' : 
+                   gameState.currentEnergy < 50 ? 'bg-yellow-400/40' : 'bg-green-400/40'
+                 }`}></div>
+                 
+                 {/* Energy Ring (Outer) */}
+                 <svg className="absolute inset-0 w-full h-full transform -rotate-90 z-10">
+                   <circle
+                     cx="48"
+                     cy="48"
+                     r="44"
+                     fill="none"
+                     stroke="rgba(255,255,255,0.1)"
+                     strokeWidth="4"
+                   />
+                   <circle
+                     cx="48"
+                     cy="48"
+                     r="44"
+                     fill="none"
+                     stroke={gameState.currentEnergy < 20 ? "#ef4444" : gameState.currentEnergy < 50 ? "#f59e0b" : "#ec4899"}
+                     strokeWidth="4"
+                     strokeLinecap="round"
+                     strokeDasharray={`${(gameState.currentEnergy / gameState.maxEnergy) * 276} 276`}
+                     className="transition-all duration-1000 drop-shadow-[0_0_4px_currentColor]"
+                   />
+                 </svg>
+                 
+                 {/* Experience Ring (Inner) */}
+                 <svg className="absolute inset-0 w-full h-full transform -rotate-90 z-10">
+                   <circle
+                     cx="48"
+                     cy="48"
+                     r="34"
+                     fill="none"
+                     stroke="rgba(255,255,255,0.1)"
+                     strokeWidth="3"
+                   />
+                   <circle
+                     cx="48"
+                     cy="48"
+                     r="34"
+                     fill="none"
+                     stroke="#3b82f6"
+                     strokeWidth="3"
+                     strokeLinecap="round"
+                     strokeDasharray={`${(gameState.miningExperience / gameState.miningExperienceToNext) * 214} 214`}
+                     className="transition-all duration-1000 drop-shadow-[0_0_3px_currentColor]"
+                   />
+                 </svg>
+
+                 {/* Enhanced Center Content */}
+                 <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                   <div className="text-lg font-mono font-black text-white drop-shadow-lg">
+                     {Math.round(gameState.currentEnergy)}
+                   </div>
+                   <div className="text-xs font-mono font-bold text-blue-400">
+                     {((gameState.miningExperience / gameState.miningExperienceToNext) * 100).toFixed(0)}%
+                   </div>
+                 </div>
+
+                 {/* Animated particles for low energy */}
+                 {gameState.currentEnergy < 20 && (
+                   <div className="absolute inset-0 overflow-hidden rounded-full z-10">
+                     {[...Array(3)].map((_, i) => (
+                       <div
+                         key={i}
+                         className="absolute w-1 h-1 bg-red-400 rounded-full animate-bounce"
+                         style={{
+                           left: `${40 + i * 8}%`,
+                           top: `${40 + (i % 2) * 20}%`,
+                           animationDelay: `${i * 0.4}s`,
+                           animationDuration: '1.5s'
+                         }}
+                       />
+                     ))}
+                   </div>
+                 )}
+               </div>
+
+               {/* Enhanced Status Indicators */}
+               <div className="ml-6 space-y-3 text-sm font-mono">
+                 <div className="flex items-center space-x-3 p-2 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                   <div className={`w-3 h-3 rounded-full shadow-md transition-all duration-300 ${
+                     gameState.currentEnergy > gameState.maxEnergy * 0.7 ? 'bg-pink-400 shadow-pink-400/30' : 
+                     gameState.currentEnergy > gameState.maxEnergy * 0.3 ? 'bg-yellow-400 shadow-yellow-400/30 animate-pulse' : 'bg-red-400 shadow-red-400/30 animate-pulse'
+                   }`}></div>
+                   <span className="text-gray-200 font-bold">
+                     {Math.round(gameState.currentEnergy)}<span className="text-gray-500">/{gameState.maxEnergy}</span>
+                   </span>
+                 </div>
+                 <div className="flex items-center space-x-3 p-2 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                   <div className="w-3 h-3 rounded-full bg-blue-400 shadow-md shadow-blue-400/30"></div>
+                   <span className="text-gray-200 font-bold">
+                     {gameState.miningExperience.toLocaleString()}<span className="text-gray-500">/{gameState.miningExperienceToNext.toLocaleString()}</span>
+                   </span>
+                 </div>
+               </div>
+             </div>
+
+             {/* Enhanced Bottom Status Row */}
+             <div className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-800/60 to-gray-900/60 rounded-lg border border-gray-700/50">
+               <div className="flex items-center space-x-4">
+                 <div className="flex items-center space-x-2 px-3 py-1 bg-pink-500/20 rounded-full border border-pink-500/30">
+                   <span className="text-xs font-mono text-pink-400">⚡</span>
+                   <span className="text-xs font-mono font-bold text-pink-400">+{getEnergyRegenerationRate().toFixed(1)}/s</span>
+                 </div>
+                 <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+                 <div className={`px-3 py-1 rounded-full border font-bold text-xs font-mono tracking-wider ${
+                   gameState.currentEnergy > gameState.maxEnergy * 0.7 
+                     ? 'bg-pink-500/20 border-pink-500/30 text-pink-400' 
+                     : gameState.currentEnergy > gameState.maxEnergy * 0.3 
+                     ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400' 
+                     : 'bg-red-500/20 border-red-500/30 text-red-400'
+                 }`}>
+                   {gameState.currentEnergy > gameState.maxEnergy * 0.7 ? '🟢 OPTIMAL' : 
+                    gameState.currentEnergy > gameState.maxEnergy * 0.3 ? '🟡 MODERATE' : '🔴 LOW PWR'}
+                 </div>
+               </div>
+               {gameState.miningCombo > 1.1 && (
+                 <div className="px-3 py-1 bg-pink-500/20 rounded-full border border-pink-500/30">
+                   <span className="text-xs font-mono font-bold text-pink-400">🔥 {gameState.miningCombo.toFixed(1)}x</span>
+                 </div>
+               )}
+             </div>
+           </div>
+         </div>
 
 
         {/* Compact Status */}
-       
+        <div className="relative z-10 flex justify-between items-center text-xs font-mono text-gray-400 bg-gray-900/20 rounded-lg p-3 border border-gray-600/30">
+          <div>
+            <span className="text-pink-400 font-bold">SESSION:</span> {getSessionDuration()}
+          </div>
+          <div>
+            <span className="text-pink-400 font-bold">TOTAL:</span> {formatNumber(gameState.totalPointsEarned)}
+          </div>
+        </div>
+
         {/* Hidden Reset Button - Only visible when holding Ctrl+Shift */}
         <div className="relative z-10 hidden">
           <button

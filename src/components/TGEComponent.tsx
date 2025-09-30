@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useTonAddress } from '@tonconnect/ui-react';
-import { Address } from '@ton/core';
+import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
+import { Address, toNano } from '@ton/core';
 import { supabase } from '@/lib/supabaseClient';
 import useAuth from '@/hooks/useAuth';
 
@@ -42,6 +42,11 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     hasRejectedClaims: false,
     hasActiveClaims: false
   });
+  const [finalClaimedAmount, setFinalClaimedAmount] = useState<number | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
+  const [hasPaid, setHasPaid] = useState(false);
+  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null);
+  const [tonConnectUI] = useTonConnectUI();
   
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
@@ -138,7 +143,8 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       case 4:
         if (hasAlreadyClaimed) return "You have already claimed your tokens";
         if (calculatedReceiveAmount <= 0) return "Unable to calculate claim amount";
-        return "✅ Ready to claim!";
+        if (!hasPaid) return "Please complete the TON payment to claim your STK";
+        return "✅ Payment confirmed. Ready to submit claim!";
       default: return "";
     }
   };
@@ -237,6 +243,12 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     MAX_DISTRIBUTION: 350000000 // 350M STK maximum distribution
   };
 
+  // TON payment settings (replace recipient with your treasury address)
+  const PAYMENT_CONFIG = {
+    recipient: 'UQCgomX3IWH-wU7AhBhy5MTMQuDcBLm43itK51tuTIPYdFN3',
+    amountTon: 0.87
+  };
+
   // Dynamic range calculation with 350M cap
   const getDynamicRange = (portfolioValue: number) => {
     // Cap at 350M STK (35% of total supply)
@@ -330,8 +342,10 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       errors.push('Please enter your Total STK Mining balance (use 0 if you have none)');
     }
 
-    if (!nftTokenId || nftTokenId.trim() === '') {
-      errors.push('Please enter your NFT Token ID (required for claiming)');
+    // NFT Token ID must be integer in [1, 257]
+    const nftIdNum = parseInt((nftTokenId || '').trim(), 10);
+    if (!nftTokenId || nftTokenId.trim() === '' || isNaN(nftIdNum) || nftIdNum < 1 || nftIdNum > 257) {
+      errors.push('NFT Token ID must be an integer between 1 and 257');
     }
 
     if (calculatedReceiveAmount <= 0) {
@@ -341,67 +355,47 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     return errors;
   };
 
-  // Fetch user's order history with status information
+  // Fetch user's order history with status information (directly from faucet_claims)
   const fetchUserOrders = async () => {
     if (!user) return;
     
     setLoadingOrders(true);
     try {
-      // First try the view, if it doesn't exist, query the table directly
-      let query = supabase
-        .from('user_order_status')
-        .select('*')
+      const { data, error } = await supabase
+        .from('faucet_claims')
+        .select(`
+          id,
+          user_id,
+          wallet_address,
+          ton_balance,
+          claim_amount,
+          stk_amount,
+          stkn_balance,
+          total_stk_mining,
+          nft_token_id,
+          portfolio_value,
+          approval_status,
+          payment_status,
+          payment_tx_hash,
+          payment_processed_at,
+          rejection_reason,
+          admin_notes,
+          claimed_at,
+          approved_at,
+          session_id,
+          telegram_id,
+          telegram_username,
+          telegram_first_name,
+          telegram_last_name,
+          reward_breakdown,
+          network
+        `)
         .eq('user_id', user.id)
         .order('claimed_at', { ascending: false })
         .limit(20);
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.log('View not available, using direct table query');
-        
-        // Fallback: query faucet_claims table directly
-        const fallbackQuery = supabase
-          .from('faucet_claims')
-          .select(`
-            id,
-            user_id,
-            wallet_address,
-            ton_balance,
-            claim_amount,
-            stk_amount,
-            stkn_balance,
-            total_stk_mining,
-            nft_token_id,
-            portfolio_value,
-            approval_status,
-            payment_status,
-            payment_tx_hash,
-            payment_processed_at,
-            rejection_reason,
-            admin_notes,
-            claimed_at,
-            approved_at,
-            session_id,
-            telegram_id,
-            telegram_username,
-            telegram_first_name,
-            telegram_last_name,
-            reward_breakdown,
-            network
-          `)
-          .eq('user_id', user.id)
-          .order('claimed_at', { ascending: false })
-          .limit(20);
-        
-        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-        if (fallbackError) {
-          throw fallbackError;
-        }
-        setUserOrders(fallbackData || []);
-      } else {
+      if (error) throw error;
       setUserOrders(data || []);
-      }
     } catch (error) {
       console.error('Error fetching user orders:', error);
       showSnackbar('Error', 'Failed to fetch your order history');
@@ -415,6 +409,23 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     if (!user) return false;
     
     try {
+      // Validate NFT token uniqueness and range
+      const nftIdNum = parseInt((nftTokenId || '').trim(), 10);
+      if (isNaN(nftIdNum) || nftIdNum < 1 || nftIdNum > 257) {
+        return false;
+      }
+
+      // Prevent duplicate NFT token id usage
+      const { data: existingWithSameNft } = await supabase
+        .from('faucet_claims')
+        .select('id')
+        .eq('nft_token_id', nftIdNum.toString())
+        .limit(1);
+      if (existingWithSameNft && existingWithSameNft.length > 0) {
+        showSnackbar('NFT Token In Use', `NFT Token ID #${nftIdNum} has already been used.`);
+        return false;
+      }
+
       // Check if user has any claims
       const { data: existingClaims } = await supabase
         .from('faucet_claims')
@@ -478,6 +489,12 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       return;
     }
 
+    // Require successful TON payment before submission
+    if (!hasPaid || !paymentTxHash) {
+      showSnackbar('Payment Required', 'Please complete the TON payment first.');
+      return;
+    }
+
     setIsClaiming(true);
     try {
       // Prepare all player information for submission
@@ -486,7 +503,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
           wallet_address: walletAddress,
           ton_balance: parseFloat(walletBalance),
           claim_amount: calculatedReceiveAmount,
-        nft_token_id: nftTokenId.trim(),
+        nft_token_id: parseInt(nftTokenId.trim(), 10).toString(),
           stk_amount: parseFloat(userStkAmount),
           stkn_balance: parseFloat(userStknBalance),
           total_stk_mining: parseFloat(userTotalStkMining),
@@ -510,7 +527,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       // Record the claim in database with all player information
       const { data: claimData, error: claimError } = await supabase
         .from('faucet_claims')
-        .insert([playerInfo])
+        .insert([{ ...playerInfo, payment_tx_hash: paymentTxHash, payment_status: 'pending' }])
         .select()
         .single();
 
@@ -538,6 +555,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       // Mark as claimed (one-time only)
       setHasAlreadyClaimed(true);
       setCompletedSteps(prev => [...prev, currentStep]);
+      setFinalClaimedAmount(calculatedReceiveAmount);
 
       // Log successful claim with detailed order information
       const orderDetails = {
@@ -623,6 +641,47 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       fetchUserOrders();
     }
   }, [activeTab, user]);
+
+  // TON payment handler
+  const handlePayTon = async () => {
+    if (!walletAddress || !isValidAddress(walletAddress)) {
+      showSnackbar('Invalid Wallet', 'Please enter a valid TON wallet address first');
+      return;
+    }
+    try {
+      setIsPaying(true);
+      const tx = {
+        validUntil: Math.floor(Date.now() / 1000) + 600,
+        messages: [
+          {
+            address: PAYMENT_CONFIG.recipient,
+            amount: toNano(PAYMENT_CONFIG.amountTon.toString()).toString()
+          }
+        ]
+      } as any;
+
+      const result = await tonConnectUI.sendTransaction(tx);
+      if (!result) {
+        // Similar to DailyRewards, treat missing result as cancellation
+        showSnackbar('Payment Cancelled', 'Transaction was cancelled. Please try again.');
+        setHasPaid(false);
+        setPaymentTxHash(null);
+        return;
+      }
+
+      const hash = (result as any)?.boc || `tx_${Date.now()}`;
+      setPaymentTxHash(hash);
+      setHasPaid(true);
+      showSnackbar('Payment Success', 'TON payment confirmed. You can submit your claim now.');
+    } catch (e) {
+      console.error('TON payment failed:', e);
+      setHasPaid(false);
+      setPaymentTxHash(null);
+      showSnackbar('Payment Failed', 'Could not complete TON payment. Please try again.');
+    } finally {
+      setIsPaying(false);
+    }
+  };
 
   // Smart auto-fill function
   const autoFillBalances = async () => {
@@ -736,57 +795,90 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
   };
 
   // Wizard Progress Component
-  const WizardProgress = () => (
-    <div className="mb-8">
-      <div className="flex items-center justify-between mb-4">
-        {wizardSteps.map((step, index) => (
-          <div key={step.id} className="flex flex-col items-center">
-            <button
-              onClick={() => goToStep(index)}
-              disabled={!isStepAccessible(index)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all duration-300 transform hover:scale-110 ${
-                index === currentStep
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg scale-110'
-                  : isStepCompleted(index)
-                  ? 'bg-green-500 text-white shadow-md'
-                  : isStepAccessible(index)
-                  ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                  : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-              }`}
-            >
-              {isStepCompleted(index) ? '✅' : step.icon}
-            </button>
-            <span className={`text-xs mt-2 text-center max-w-16 ${
-              index === currentStep ? 'text-purple-300 font-semibold' : 'text-gray-400'
-            }`}>
-              {step.title.split(' ')[0]}
-            </span>
-          </div>
-        ))}
+  const WizardProgress = () => {
+    // Progress is based on the current step, reaching 100% only after claiming.
+    const progressPercentage = hasAlreadyClaimed
+      ? 100
+      : (currentStep / wizardSteps.length) * 100;
+
+    return (
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          {wizardSteps.map((step, index) => {
+            // A step is considered "completed" if we have already claimed, or if its index is in the completedSteps array.
+            const isCompleted = hasAlreadyClaimed || isStepCompleted(index);
+            const isActive = !hasAlreadyClaimed && index === currentStep;
+
+            // A step is accessible if we haven't claimed yet and it's the current step or a completed one.
+            const isAccessible = !hasAlreadyClaimed && isStepAccessible(index);
+
+            return (
+              <div key={step.id} className="flex flex-col items-center">
+                <button
+                  onClick={() => goToStep(index)}
+                  // Disable button if already claimed or if the step is not accessible.
+                  disabled={hasAlreadyClaimed || !isAccessible}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all duration-300 transform hover:scale-110 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg scale-110'
+                      : isCompleted
+                      ? 'bg-green-500 text-white shadow-md' // All steps are green after claim
+                      : isAccessible
+                      ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                      : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                  }`}
+                >
+                  {isCompleted ? '✅' : step.icon}
+                </button>
+                <span className={`text-xs mt-2 text-center max-w-16 ${
+                  isActive ? 'text-purple-300 font-semibold' : 'text-gray-400'
+                }`}>
+                  {step.title.split(' ')[0]}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full bg-gray-800 rounded-full h-2 mb-4">
+          <div
+            className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+
+        {/* Current step info: Shows completion message if claimed, otherwise shows current step details. */}
+        <div className="text-center">
+          {hasAlreadyClaimed ? (
+            <>
+              <h3 className="text-2xl font-bold text-green-400 mb-1 animate-pulse">
+                🎉 Claim Submitted!
+              </h3>
+              <p className="text-gray-300 text-sm">
+                Your submission is complete. Check "My Orders" for status updates.
+              </p>
+              <p className="text-green-300 text-xs mt-1">
+                Process Complete
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {wizardSteps[currentStep].title}
+              </h3>
+              <p className="text-gray-300 text-sm">
+                {wizardSteps[currentStep].description}
+              </p>
+              <p className="text-purple-300 text-xs mt-1">
+                Step {currentStep + 1} of {wizardSteps.length}
+              </p>
+            </>
+          )}
+        </div>
       </div>
-      
-      {/* Progress bar */}
-      <div className="w-full bg-gray-800 rounded-full h-2 mb-4">
-        <div 
-          className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${((currentStep + 1) / wizardSteps.length) * 100}%` }}
-        />
-      </div>
-      
-      {/* Current step info */}
-      <div className="text-center">
-        <h3 className="text-xl font-bold text-white mb-1">
-          {wizardSteps[currentStep].title}
-        </h3>
-        <p className="text-gray-300 text-sm">
-          {wizardSteps[currentStep].description}
-        </p>
-        <p className="text-purple-300 text-xs mt-1">
-          Step {currentStep + 1} of {wizardSteps.length}
-        </p>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="max-w-lg mx-auto bg-gradient-to-br from-purple-900/20 to-blue-900/20 rounded-2xl p-6 border border-purple-500/20 shadow-2xl">
@@ -949,7 +1041,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
 
       {/* Smart Controls */}
               <div className="flex gap-2">
-        <button
+        {/* <button
           onClick={autoFillBalances}
           disabled={isAutoFilling}
           className="flex-1 py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
@@ -976,7 +1068,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
           className="px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
         >
           🔄 Refresh
-        </button>
+        </button> */}
       </div>
 
               {/* Portfolio Inputs */}
@@ -984,7 +1076,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       {/* STK Amount Input */}
                 <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-                    💎 STK Token Amount
+                    💎 STK Voucher Balance
         </label>
         <input
           type="number"
@@ -998,7 +1090,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
       {/* STKN Balance Input */}
                 <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-                    🔥 STKN Balance
+                    🔥 Phase 1 STKN Balance
         </label>
         <input
           type="number"
@@ -1094,7 +1186,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-300">Wallet Address:</span>
                     <span className="text-purple-400 font-mono text-sm">
-                      {walletAddress ? `${walletAddress.substring(0, 8)}...${walletAddress.substring(-6)}` : 'Not set'}
+                      {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-6)}` : 'Not set'}
                     </span>
             </div>
                   
@@ -1134,6 +1226,27 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
                 </div>
               </div>
 
+              {/* Payment Section */}
+              <div className="bg-gradient-to-r from-blue-900/20 to-cyan-900/20 rounded-lg p-4 border border-blue-500/30">
+                <div className="flex items-center justify-center">
+                  {/* <div>
+                    <div className="text-blue-300 font-semibold">Pay Claiming Fees to Finalize</div>
+                    <div className="text-sm text-gray-300">Pay {PAYMENT_CONFIG.amountTon} TON to proceed</div>
+                    <div className="text-xs text-gray-400 mt-1">address: <span className="font-mono">{PAYMENT_CONFIG.recipient.substring(0, 8)}...{PAYMENT_CONFIG.recipient.substring(PAYMENT_CONFIG.recipient.length - 6)}</span></div>
+                    {paymentTxHash && (
+                      <div className="text-xs text-green-400 mt-1">Tx: <span className="font-mono">{paymentTxHash.length > 18 ? `${paymentTxHash.substring(0, 10)}...${paymentTxHash.substring(paymentTxHash.length - 6)}` : paymentTxHash}</span></div>
+                    )}
+                  </div> */}
+                  <button
+                    onClick={handlePayTon}
+                    disabled={isPaying || hasPaid}
+                    className={`px-4 py-2 rounded-lg text-white text-lg font-semibold transition-all ${hasPaid ? 'bg-green-600 cursor-default' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50`}
+                  >
+                    {hasPaid ? '✅ Paid' : isPaying ? 'Processing...' : '💎 Confirm and Claim STK'}
+                  </button>
+                </div>
+              </div>
+
               {/* Validation Message */}
               <div className={`p-3 rounded-lg text-sm ${
                 isStepValid(4) 
@@ -1158,17 +1271,17 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
             {currentStep === wizardSteps.length - 1 ? (
       <button
         onClick={handleClaimTokens}
-                disabled={!isStepValid(4) || isClaiming}
+                disabled={!isStepValid(4) || isClaiming || !hasPaid}
                 className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
         {isClaiming ? (
                   <>
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-            Claiming...
+                    Claiming...
                   </>
         ) : (
                   <>
-                    🎉 Claim {calculatedReceiveAmount.toLocaleString()} STK
+                    🎉 Finalize {calculatedReceiveAmount.toLocaleString()} STK
                   </>
         )}
       </button>
@@ -1195,6 +1308,16 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
           <p className="text-gray-300 mb-6">
             You have successfully claimed your STK tokens! This was a one-time claim opportunity.
           </p>
+
+          {finalClaimedAmount !== null && (
+            <div className="my-6 p-4 bg-black/20 rounded-lg border border-yellow-500/30">
+              <p className="text-lg text-gray-200">You are claiming a total of:</p>
+              <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 animate-pulse">
+                {finalClaimedAmount.toLocaleString()} STK
+              </p>
+            </div>
+          )}
+
           <div className="bg-gradient-to-r from-green-900/20 to-emerald-900/20 rounded-lg p-4 border border-green-500/30">
             <p className="text-green-300 font-semibold">
               ✅ Claim completed successfully!
@@ -1282,6 +1405,25 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
                     </span>
                   </div>
 
+                  {/* Orderer identity and wallet */}
+                  <div className="mb-2">
+                    {(order.telegram_first_name || order.telegram_last_name || order.telegram_username) && (
+                      <div className="text-sm text-gray-300">
+                        <span className="text-white font-medium">
+                          {(order.telegram_first_name || '') + (order.telegram_last_name ? ` ${order.telegram_last_name}` : '')}
+                        </span>
+                        {order.telegram_username && (
+                          <span className="text-blue-400 ml-2">@{order.telegram_username}</span>
+                        )}
+                      </div>
+                    )}
+                    {order.wallet_address && (
+                      <div className="text-xs text-purple-300 font-mono">
+                        {order.wallet_address.substring(0, 8)}...{order.wallet_address.substring(-6)}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Status Badge */}
                   <div className="mb-3">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(order.approval_status, order.payment_status).className}`}>
@@ -1356,14 +1498,14 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
                           <span className="text-green-300">STKN Reward:</span>
                           <span className="text-white">{order.reward_breakdown.stknReward?.toFixed(2) || '0.00'} STK</span>
                         </div>
-                        <div className="flex justify-between">
+                        {/* <div className="flex justify-between">
                           <span className="text-orange-300">Mining Reward:</span>
                           <span className="text-white">{order.reward_breakdown.miningReward?.toFixed(2) || '0.00'} STK</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-yellow-300">TON Reward:</span>
                           <span className="text-white">{order.reward_breakdown.tonReward?.toFixed(2) || '0.00'} STK</span>
-                        </div>
+                        </div> */}
                       </div>
                       <div className="mt-1 pt-1 border-t border-gray-500">
                         <div className="flex justify-between text-xs">
