@@ -400,36 +400,20 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     }
   };
 
-  // Check if user can claim (one-time check)
-  const checkClaimEligibility = async () => {
-    if (!user) return false;
-    
+  // Auto-detect user claim status on load
+  const fetchUserClaimStatus = async () => {
+    if (!user) return;
+
     try {
-      // Validate NFT token uniqueness and range
-      const nftIdNum = parseInt((nftTokenId || '').trim(), 10);
-      if (isNaN(nftIdNum) || nftIdNum < 1 || nftIdNum > 257) {
-        return false;
-      }
-
-      // Prevent duplicate NFT token id usage
-      const { data: existingWithSameNft } = await supabase
+      const { data: existingClaims, error } = await supabase
         .from('faucet_claims')
-        .select('id')
-        .eq('nft_token_id', nftIdNum.toString())
-        .limit(1);
-      if (existingWithSameNft && existingWithSameNft.length > 0) {
-        showSnackbar('NFT Token In Use', `NFT Token ID #${nftIdNum} has already been used.`, 'warning');
-        return false;
-      }
-
-      // Check if user has any claims
-      const { data: existingClaims } = await supabase
-        .from('faucet_claims')
-        .select('id, approval_status, rejection_reason')
+        .select('id, approval_status, rejection_reason, claim_amount')
         .eq('user_id', user.id);
-      
+
+      if (error) throw error;
+
       if (existingClaims && existingClaims.length > 0) {
-        const hasActiveClaim = existingClaims.some(claim => 
+        const activeClaim = existingClaims.find(claim =>
           claim.approval_status === 'approved' || claim.approval_status === 'pending'
         );
         const hasRejectedClaim = existingClaims.some(claim => 
@@ -438,33 +422,55 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
         const latestRejection = existingClaims.find(claim => 
           claim.approval_status === 'rejected'
         );
-        
-        // Update user claim status
+
         setUserClaimStatus({
           hasRejectedClaims: hasRejectedClaim,
-          hasActiveClaims: hasActiveClaim,
-          rejectionReason: latestRejection?.rejection_reason
+          hasActiveClaims: !!activeClaim,
+          rejectionReason: latestRejection?.rejection_reason,
         });
-        
-        if (hasActiveClaim) {
+
+        if (activeClaim) {
           setHasAlreadyClaimed(true);
-          return false; // User has an active claim
+          setFinalClaimedAmount(activeClaim.claim_amount);
+        } else {
+          setHasAlreadyClaimed(false);
         }
-        
-        // User only has rejected claims, so they can try again
+      } else {
+        // No claims at all
         setHasAlreadyClaimed(false);
-        return true;
+        setUserClaimStatus({ hasRejectedClaims: false, hasActiveClaims: false });
       }
-      
-      // No claims at all, user can claim
-      setUserClaimStatus({
-        hasRejectedClaims: false,
-        hasActiveClaims: false
-      });
-      setHasAlreadyClaimed(false);
-      return true;
     } catch (error) {
-      console.error('Error checking claim eligibility:', error);
+      console.error('Error fetching user claim status:', error);
+      showSnackbar('Error', 'Could not verify your claim status.', 'error');
+    }
+  };
+
+  // Pre-submission validation for NFT uniqueness
+  const validateNftBeforeClaim = async () => {
+    const nftIdNum = parseInt((nftTokenId || '').trim(), 10);
+    if (isNaN(nftIdNum) || nftIdNum < 1 || nftIdNum > 257) {
+      // This is handled by validateClaimInputs, but good to have a check here too
+      return false;
+    }
+
+    try {
+      const { data: existingWithSameNft, error } = await supabase
+        .from('faucet_claims')
+        .select('id')
+        .eq('nft_token_id', nftIdNum.toString())
+        .limit(1);
+      
+      if (error) throw error;
+
+      if (existingWithSameNft && existingWithSameNft.length > 0) {
+        showSnackbar('NFT Token In Use', `NFT Token ID #${nftIdNum} has already been used.`, 'warning');
+        return false;
+      }
+      return true; // NFT is unique
+    } catch (error) {
+      console.error('Error validating NFT token ID:', error);
+      showSnackbar('Error', 'Could not validate your NFT Token ID.', 'error');
       return false;
     }
   };
@@ -479,10 +485,14 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
     }
 
     // Check one-time claim eligibility
-    const canClaim = await checkClaimEligibility();
-    if (!canClaim) {
-      showSnackbar('Already Claimed', 'You have already claimed your tokens. This is a one-time claim only.', 'warning');
+    if (hasAlreadyClaimed) {
+      showSnackbar('Already Claimed', 'You have already submitted a claim. Please check "My Orders".', 'warning');
       return;
+    }
+
+    const isNftUnique = await validateNftBeforeClaim();
+    if (!isNftUnique) {
+      return; // Snackbar is shown inside the validation function
     }
 
     // Require successful TON payment before submission
@@ -627,7 +637,7 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
   // Check claim eligibility when user is available
   useEffect(() => {
     if (user) {
-      checkClaimEligibility();
+      fetchUserClaimStatus();
     }
   }, [user]);
 
