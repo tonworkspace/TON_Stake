@@ -4,6 +4,7 @@ import { Address, toNano } from '@ton/core';
 import { supabase } from '@/lib/supabaseClient';
 import useAuth from '@/hooks/useAuth';
 import { useNotificationSystem } from '@/components/NotificationSystem';
+import FormattedNumericInput from './FormattedNumericInput';
 
 interface TokenReceiverProps {
   onClaimSuccess?: (amount: number) => void;
@@ -1073,10 +1074,9 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
         <label className="block text-sm font-medium text-gray-300 mb-2">
                     💎 STK Voucher Balance
         </label>
-        <input
-          type="number"
+        <FormattedNumericInput
           value={userStkAmount}
-          onChange={(e) => setUserStkAmount(e.target.value)}
+          onChange={setUserStkAmount}
                     placeholder="Enter amount of STK tokens you hold..."
                     className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
         />
@@ -1087,10 +1087,9 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
         <label className="block text-sm font-medium text-gray-300 mb-2">
                     🔥 Phase 1 STKN Balance
         </label>
-        <input
-          type="number"
+        <FormattedNumericInput
           value={userStknBalance}
-          onChange={(e) => setUserStknBalance(e.target.value)}
+          onChange={setUserStknBalance}
                     placeholder="Enter your STKN balance..."
                     className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
         />
@@ -1101,10 +1100,9 @@ const TGEComponent: React.FC<TokenReceiverProps> = ({ onClaimSuccess }) => {
         <label className="block text-sm font-medium text-gray-300 mb-2">
                     ⛏️ Total STK Mining Balance
         </label>
-        <input
-          type="number"
+        <FormattedNumericInput
           value={userTotalStkMining}
-          onChange={(e) => setUserTotalStkMining(e.target.value)}
+          onChange={setUserTotalStkMining}
                     placeholder="Enter your current Total STK Mining balance..."
                     className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                   />
